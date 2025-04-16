@@ -12,7 +12,10 @@ async function getTmdbRatingDetails(tmdbId, type) {
     const url = `${config.tmdb.apiUrl}/${endpoint}/${tmdbId}?api_key=${config.tmdb.apiKey}`;
 
     try {
-        const response = await axios.get(url, { timeout: 5000 });
+        const response = await axios.get(url, {
+            headers: { 'User-Agent': config.userAgent, 'Accept-Language': 'en-US,en;q=0.9' }, // Added Accept-Language
+            // timeout: 5000 // 
+        });
         const data = response.data;
 
         if (data && data.vote_average !== undefined && data.vote_average !== 0) { // Check vote_average exists and is not 0
@@ -80,7 +83,7 @@ async function getTmdbEpisodeRatingDetails(seriesTmdbId, seasonNumber, episodeNu
 }
 
 // Main exported function for this provider
-async function getRating(type, imdbId) {
+async function getRating(type, imdbId , streamInfo ,tmdbId) {
     logger.debug(`${PROVIDER_NAME}: Fetching rating for ${imdbId} (${type})`);
 
     // Check if it's an episode request (e.g., "tt1234567:1:1")
@@ -94,7 +97,7 @@ async function getRating(type, imdbId) {
             logger.warn(`${PROVIDER_NAME}: Invalid series ID format with episode details: ${imdbId}. Falling back to series rating.`);
             // Fall through to fetch series rating instead
         } else {
-            const seriesTmdbId = await getTmdbId(baseImdbId, type); // Use base ID
+            const seriesTmdbId = tmdbId;
             if (!seriesTmdbId) {
                 logger.warn(`${PROVIDER_NAME}: Cannot get episode rating without TMDB ID for series ${baseImdbId}.`);
                 return null; // Can't proceed for episode
@@ -112,7 +115,6 @@ async function getRating(type, imdbId) {
     }
 
     // Default: Fetch movie rating or overall series rating
-    const tmdbId = await getTmdbId(imdbId, type); // Handles stripping season/episode internally
     if (!tmdbId) {
         logger.warn(`${PROVIDER_NAME}: Cannot proceed without TMDB ID for ${imdbId}.`);
         return null;

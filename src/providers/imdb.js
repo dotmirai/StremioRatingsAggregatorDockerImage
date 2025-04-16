@@ -12,23 +12,28 @@ async function getRating(type, imdbId) {
 
     try {
         const response = await axios.get(url, {
-            headers: { 'User-Agent': config.userAgent, 'Accept-Language': 'en-US,en;q=0.9' }, // Added Accept-Language
-            timeout: 10000 // Increased timeout for scraping
+            headers: { 'User-Agent': config.userAgent, 'Accept-Language': 'en-US,en;q=0.9' },
+            timeout: 10000
         });
 
         const $ = cheerio.load(response.data);
 
-        // Updated selector based on potential IMDb structure (verify if needed)
-        const ratingElement = $('[data-testid="hero-rating-bar__aggregate-rating__score"] > span:first-child');
+        // Updated selector based on the new IMDb structure
+        const ratingElement = $('div[data-testid="hero-rating-bar__aggregate-rating__score"] > span.sc-d541859f-1');
         let rating = ratingElement.text().trim();
 
-        // Simple validation/cleanup
-        if (rating && /^\d+(\.\d+)?$/.test(rating)) {
-            // Sometimes IMDb duplicates the rating like "8.38.3". Take the first valid part.
-            if (rating.length > 4 && rating.substring(0, rating.length / 2) === rating.substring(rating.length / 2)) {
-                rating = rating.substring(0, rating.length / 2);
-            }
+        // split rating string in half if the string is of 6 characters make it first 3
+        rating = rating.length === 6 ? rating.substring(0, 3) : rating;
 
+        // Check if rating is a valid number
+        if (rating && !/^\d+(\.\d+)?$/.test(rating)) {
+            logger.warn(`${PROVIDER_NAME}: Invalid rating format for ${baseImdbId}: ${rating}`);
+            return null;
+        }
+        
+
+        // Simple validation/cleanup 
+        if (rating) {
             logger.debug(`${PROVIDER_NAME}: Found rating ${rating}/10 for ${baseImdbId}`);
             return {
                 source: PROVIDER_NAME,
@@ -36,19 +41,7 @@ async function getRating(type, imdbId) {
                 url: url,
             };
         } else {
-            // Attempt fallback selector if the primary one fails
-            const fallbackElement = $('.sc-bde20123-1.cMEQkK span').first(); // Example fallback selector - adjust as needed
-            rating = fallbackElement.text().trim();
-            if (rating && /^\d+(\.\d+)?$/.test(rating)) {
-                logger.debug(`${PROVIDER_NAME}: Found rating ${rating}/10 for ${baseImdbId} (using fallback selector)`);
-                return {
-                    source: PROVIDER_NAME,
-                    value: `${rating}/10`,
-                    url: url,
-                };
-            }
-
-            logger.warn(`${PROVIDER_NAME}: Could not find rating for ${baseImdbId} on page ${url}. Rating found: "${rating}"`);
+            logger.warn(`${PROVIDER_NAME}: Could not find rating for ${baseImdbId} on page ${url}.`);
             return null;
         }
     } catch (error) {

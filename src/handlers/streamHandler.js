@@ -75,11 +75,9 @@ async function streamHandler({ type, id }) {
         // Add CringeMDB Warnings/Certification at the end
         const cringeMdb = ratings.find(r => r.source === 'CringeMDB' || r.source === 'Certification');
         if (cringeMdb) {
-            formattedLines.push("───────────────"); // Separator before CringeMDB
-            formattedLines.push(`${getEmojiForSource(cringeMdb.source)} CringeMDB Info:`);
             // Split multi-line value from CringeMDB
             cringeMdb.value.split('\n').forEach(line => {
-                if (line.trim()) formattedLines.push(`  ${line.trim()}`);
+                if (line.trim()) formattedLines.push(`${line.trim()}`);
             });
         }
 
@@ -87,10 +85,10 @@ async function streamHandler({ type, id }) {
 
         // Create the stream object for Stremio
         const stream = {
-            name: "📊 Ratings & Info", // Main title for the stream item
+            name: "📊 Ratings PRO", // Main title for the stream item
             description: formattedLines.join('\n'),
             // Use IMDb URL as a fallback/reference if no specific rating URL is best
-            url: ratings.find(r => r.source === 'IMDb')?.url || `${config.sources.imdbBaseUrl}/title/${id.split(':')[0]}/`,
+            externalUrl: ratings.find(r => r.source === 'IMDb')?.url || `${config.sources.imdbBaseUrl}/title/${id.split(':')[0]}/`,
             behaviorHints: {
                 notWebReady: true, // Important: Indicates this isn't a playable video stream
                 bingeGroup: `ratings-${id}` // Group rating streams together for an item

@@ -33,7 +33,7 @@ async function scrapeCringeMDBPage(url) {
 
         // Check verification status
         const isVerifiedSafe = $('.certification .emoji .safe').length > 0;
-        const certification = isVerifiedSafe ? '✅ Verified Parent-Safe' : '⚠️ Not Verified Safe';
+        const certification = isVerifiedSafe ? '✅ Parent-Safe' : '⚠️ Not Safe';
         warnings.push(certification); // Add certification first
 
         // Get content warnings (sex, nudity, violence)
@@ -94,7 +94,7 @@ async function scrapeCringeMDBPage(url) {
     }
 }
 
-async function getRating(type, imdbId) {
+async function getRating(type, imdbId,streamInfo) {
     // CringeMDB primarily focuses on movies
     if (type !== 'movie') {
         logger.debug(`${PROVIDER_NAME}: Skipping check, only supports movies.`);
@@ -104,7 +104,6 @@ async function getRating(type, imdbId) {
     logger.debug(`${PROVIDER_NAME}: Fetching content warnings for ${imdbId}`);
 
     try {
-        const streamInfo = await getStreamNameAndYear(imdbId, type);
         if (!streamInfo?.name || !streamInfo?.year) {
             logger.warn(`${PROVIDER_NAME}: Cannot proceed without title and release year for ${imdbId}.`);
             return null;

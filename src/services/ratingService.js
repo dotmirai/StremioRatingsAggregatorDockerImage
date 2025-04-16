@@ -3,6 +3,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const getStreamNameAndYear = require('../utils/getStreamName');
 const providers = require('../providers'); // Import all exported providers
+const getTmdbId = require('../utils/getTmdbId');
 
 const CACHE_PREFIX = 'ratings:';
 
@@ -64,6 +65,7 @@ async function getRatings(type, imdbId) {
     // 2. Fetch from Providers if Cache Miss
     logger.info(`Aggregating ratings for ${imdbId} (${type}) from providers...`);
     let streamInfo = null; // Store stream info once
+    let tmdbId = null; // Store TMDB ID if needed
 
     try {
         // Fetch stream name/year needed by some scrapers *once*
@@ -72,9 +74,17 @@ async function getRatings(type, imdbId) {
             ['Metacritic', 'Common Sense', 'CringeMDB'].includes(p.name) // Add others if needed
         );
 
+        // fetch tmdb id 
+        if (!tmdbId) {
+            tmdbId = await getTmdbId(baseImdbId, type);
+            if (!tmdbId) {
+                logger.warn(`Could not retrieve TMDB ID for ${baseImdbId}, some scrapers might fail.`);
+            }
+        }
+
         if (needsStreamInfo) {
             logger.debug(`Workspaceing stream metadata for ${baseImdbId} as scrapers need it.`);
-            streamInfo = await getStreamNameAndYear(baseImdbId, type);
+            streamInfo = await getStreamNameAndYear(baseImdbId, type , tmdbId);
             if (!streamInfo) {
                 logger.warn(`Could not retrieve stream metadata for ${baseImdbId}, some scrapers might fail.`);
             }
@@ -85,7 +95,7 @@ async function getRatings(type, imdbId) {
 
         // Fetch from all active providers in parallel, collecting all results (success or failure)
         const providerPromises = activeProviders.map(provider =>
-            provider.getRating(type, imdbId, streamInfo) // Pass streamInfo if fetched
+            provider.getRating(type, imdbId, streamInfo,tmdbId) // Pass streamInfo if fetched
                 .then(result => ({ status: 'fulfilled', value: result, provider: provider.name }))
                 .catch(error => ({ status: 'rejected', reason: error, provider: provider.name }))
         );

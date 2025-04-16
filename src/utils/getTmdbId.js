@@ -21,7 +21,7 @@ async function getTmdbId(imdbId, type) {
     const url = `${config.tmdb.apiUrl}/find/${baseImdbId}?api_key=${config.tmdb.apiKey}&external_source=imdb_id`;
 
     try {
-        const response = await axios.get(url, { timeout: 5000 }); // Added timeout
+        const response = await axios.get(url); // Added timeout
 
         let tmdbId = null;
         let results = [];

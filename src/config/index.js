@@ -12,7 +12,7 @@ const config = {
     },
     cache: {
         // Default TTL: 24 hours in seconds
-        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '86400', 10),
+        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '172800', 10),
     },
     sources: {
         imdbBaseUrl: 'https://www.imdb.com',

@@ -10,15 +10,14 @@ const getTmdbId = require('./getTmdbId'); // Use the updated utility
  * @param {string} type - Content type ('movie' or 'series')
  * @returns {Promise<{name: string, year: string | null} | null>} Object containing name and year if found, null otherwise. Year might be null.
  */
-async function getStreamNameAndYear(imdbId, type) {
+async function getStreamNameAndYear(imdbId, type ,tmdbId) {
     if (!config.tmdb.apiKey) {
         logger.error('TMDB API Key not configured for getStreamNameAndYear.');
         return null; // Return null instead of throwing to allow scrapers to potentially fail gracefully
     }
 
     try {
-        const tmdbId = await getTmdbId(imdbId, type); // Reuse the utility
-
+        // Ensure we only use the base IMDb ID (remove season/episode)
         if (!tmdbId) {
             logger.warn(`getStreamNameAndYear: Could not find TMDB ID for IMDb ID: ${imdbId}. Cannot fetch metadata.`);
             return null;
