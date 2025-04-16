@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { "src": "^/configure/(.*)", "dest": "/frontend/$1" },
+    { "src": "^/configure$", "dest": "/frontend/index.html" },
+    { "src": "^(.*)/manifest\\.json$", "dest": "/src/server.js" },
+    { "src": "^/analytics$", "dest": "/src/server.js" },
+    { "src": "^/(.*)", "dest": "/src/server.js" }
+  ]
+}
