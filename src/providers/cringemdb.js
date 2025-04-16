@@ -33,7 +33,7 @@ async function scrapeCringeMDBPage(url) {
 
         // Check verification status
         const isVerifiedSafe = $('.certification .emoji .safe').length > 0;
-        const certification = isVerifiedSafe ? '✅ Parent-Safe' : '⚠️ Not Safe';
+        const certification = isVerifiedSafe ? '✅ Parent-Safe' : '⚠️ Not Parent Safe';
         warnings.push(certification); // Add certification first
 
         // Get content warnings (sex, nudity, violence)
