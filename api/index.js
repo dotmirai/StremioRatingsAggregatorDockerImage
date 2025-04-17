@@ -1,5 +1,7 @@
 // Load environment variables first
 require('dotenv').config();
+// Add this before any other imports
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 const express = require('express');
 const path = require('path');
