@@ -5,15 +5,8 @@ export default defineConfig({
   plugins: [react()],
   base: '/configure/',
   build: {
-    outDir: 'dist',
+    outDir: '../frontend/dist',
     emptyOutDir: true,
-  },
-  server: {
-    proxy: {
-      '/manifest.json': {
-        target: 'http://127.0.0.1:61262',
-        changeOrigin: true,
-      }
-    }
+    manifest: true
   }
 })
