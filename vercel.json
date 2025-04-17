@@ -17,27 +17,15 @@
   ],
   "rewrites": [
     { "source": "/manifest.json", "destination": "/api" },
-    { 
-      "source": "/(.*)", 
-      "destination": "/api" 
-    },
-    { 
-      "source": "/configure",
-      "destination": "/frontend/dist/index.html" 
-    },
-    { 
-      "source": "/configure/_assets/(.*)",
-      "destination": "/frontend/dist/assets/$1" 
-    }
+    { "source": "/configure/_assets/(.*)", "destination": "/frontend/dist/assets/$1" },
+    { "source": "/configure", "destination": "/frontend/dist/index.html" },
+    { "source": "/(.*)", "destination": "/api" }
   ],
   "headers": [
     {
       "source": "/configure/_assets/(.*)",
       "headers": [
-        { 
-          "key": "Cache-Control", 
-          "value": "public, max-age=31536000, immutable" 
-        }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
   ]
