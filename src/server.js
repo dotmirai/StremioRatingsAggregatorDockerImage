@@ -3,47 +3,67 @@
 // Load environment variables first
 require('dotenv').config();
 
-const { serveHTTP } = require('stremio-addon-sdk');
-const config = require('./config'); // Load config after dotenv
-const addonInterface = require('./addon');
-const redisClient = require('./cache/redisClient');
+const express = require('express');
+const path = require('path');
 const logger = require('./utils/logger');
+const config = require('./config');
+const addonInterface = require('./addon');        // builder.getInterface()
+const { getRouter } = require('stremio-addon-sdk');
+const redisClient = require('./cache/redisClient');
 
 async function startServer() {
     logger.info('Starting addon server...');
 
     // Initialize Redis connection
     await redisClient.connect();
-
     if (!redisClient.isReady()) {
         logger.warn('Redis connection failed or not ready. Addon will run WITHOUT caching.');
-        // Decide if you want to exit or run without cache
-        // process.exit(1);
+        // process.exit(1); // optional: exit if you consider cache critical
     }
 
-    // Start the HTTP server
-    serveHTTP(addonInterface, { port: config.port })
-        .then(({ url }) => {
-            logger.info(`Addon server listening on ${url}`);
-            logger.info(`Configure Stremio with: ${url}/manifest.json`);
+    // Create Express app
+    const app = express();
 
-            // Optional: Publish to community addon list (uncomment when deployed)
-            // const manifestUrl = "YOUR_DEPLOYED_MANIFEST_URL"; // e.g., https://your-addon-domain/manifest.json
-            // publishToCentral(manifestUrl)
-            //    .then(() => logger.info(`Published to central catalog: ${manifestUrl}`))
-            //    .catch(err => logger.error('Failed to publish to central:', err));
-        })
-        .catch(err => {
-            logger.error('Failed to start addon server:', err);
-            process.exit(1);
-        });
+    // Serve any static files you place in ./public
+    // (e.g. your configure.html, CSS, images, etc.)
+    const distPath = path.join(__dirname, '../frontend/dist');
+    console.log(distPath);
+    app.use('/configure', express.static(distPath));
+
+    // Custom configure route:
+    // Renders public/configure.html which should contain
+    // your “Install” button/deeplink to manifest.json
+
+    // i wanna redirect / route to /configure route
+    app.get('/', (_req, res) => {
+        res.redirect('/configure');
+    });
+
+
+
+    app.get('/configure', (_req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+    });
+
+    // Mount the Stremio addon (manifest.json, API, etc.)
+    // Note: the addonInterface returned by builder.getInterface()
+    // is itself an express router under the hood.
+    app.use(getRouter(addonInterface));
+    logger.info('Addon router mounted.');
+
+    // Start HTTP server
+    const port = config.port;
+    app.listen(port, () => {
+        const url = `http://localhost:${port}`;
+        logger.info(`Addon server listening on ${url}`);
+        logger.info(`Configure/install via ${url}/configure`);
+    });
 }
 
 // Graceful shutdown
 async function shutdown(signal) {
     logger.warn(`Received ${signal}. Shutting down...`);
     await redisClient.disconnect();
-    // Add any other cleanup here
     logger.info('Shutdown complete.');
     process.exit(0);
 }

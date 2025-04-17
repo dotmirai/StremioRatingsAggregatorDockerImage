@@ -32,7 +32,7 @@ const config = {
         types: ['movie', 'series'],
         idPrefixes: ['tt'], // Only react to IMDb IDs
         behaviorHints: {
-            configurable: false,
+            configurable: true,
             configurationRequired: false,
         }
     }

@@ -4,6 +4,11 @@ import { toast } from 'react-toastify';
 import { SiStremio } from "react-icons/si";
 import RatingCard from './components/RatingCard';
 import { addonConfig } from './config'; // Update this import
+import showCase from './assets/showcase.png';
+import { KoFiDialog } from 'react-kofi';      // ← import here
+import 'react-kofi/dist/styles.css';          // ← import styles
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 function App() {
   const manifestUrl = `${addonConfig.backendUrl}/manifest.json`;
@@ -19,7 +24,8 @@ function App() {
   };
 
   const handleStremioApp = () => {
-    window.location.href = `stremio://addon/${encodeURIComponent(manifestUrl)}`;
+    const deepLink = manifestUrl.replace(/^https?:\/\//i, 'stremio://');
+    window.location.href = deepLink;
   };
 
   return (
@@ -37,7 +43,7 @@ function App() {
             animate={{ scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            Ratings Pro
+            Ratings Aggregator  
           </motion.h1>
           <motion.p 
             className="text-xl text-gray-300 max-w-2xl mx-auto"
@@ -81,7 +87,47 @@ function App() {
           >
             <SiStremio /> Open Stremio
           </motion.button>
+          
+          {/* <KoFiDialog
+            color="#00b4f7"
+            textColor="#fff"
+            id="prototypr"
+            label="Support me"
+            padding={0}
+            width={400}
+            iframe={false}
+            buttonRadius="8px"
+          /> */}
         </motion.div>
+
+        {/* i need a image div here for showcase and stuff soo make sure it's responsive and looks good on all devices and be creative and unique. */}
+        <motion.div
+          className="mb-16"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          {/* Add a class to center the image */}
+          <div className="flex items-center justify-center w-full">
+            <img
+              src={showCase}
+              alt="Showcase"
+              className="w-full max-w-sm h-auto rounded-lg shadow-lg"
+            />
+          </div>
+        </motion.div>
+        <motion.div
+          className="text-center mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
+          {/* <h2 className="text-3xl font-bold mb-4">Why Ratings Aggregator ?</h2>
+          <p className="text-gray-300 max-w-2xl mx-auto">
+            Ratings Aggregator is your go-to solution for getting comprehensive ratings and reviews for movies and TV shows. With our addon, you can easily access ratings from multiple sources, including IMDb, TMDb, and more. Plus, we provide detailed content warnings to help you make informed viewing decisions.
+          </p> */}
+        </motion.div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           <RatingCard
@@ -99,6 +145,7 @@ function App() {
             description="Detailed content warnings from CringeMDB"
             icon="⚠️"
           />
+
         </div>
 
         <motion.div 
@@ -110,6 +157,9 @@ function App() {
           <p className="text-gray-400">
             Version {addonConfig.version} • Made with ❤️ for Stremio
           </p>
+
+          
+
         </motion.div>
       </motion.div>
     </div>
