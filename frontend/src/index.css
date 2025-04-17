@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --primary-gradient: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
-  --secondary-gradient: linear-gradient(135deg, #FF6B6B 0%, #556270 100%);
+  --primary-gradient: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  --secondary-gradient: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
+  --glass-bg: rgba(255, 255, 255, 0.05);
 }
-
 * {
   margin: 0;
   padding: 0;
@@ -38,8 +38,16 @@ body {
 }
 
 .card-gradient {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  backdrop-filter: blur(10px);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-gradient:hover {
+  /* background: rgba(255, 255, 255, 0.08); */
+  transform: translateY(-2px);
 }
 
 .floating {

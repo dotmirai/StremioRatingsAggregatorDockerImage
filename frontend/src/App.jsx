@@ -6,6 +6,8 @@ import { SiStremio } from "react-icons/si";
 import RatingCard from './components/RatingCard';
 import { addonConfig } from './config';
 import showCase from './assets/showcase.png';
+import { AddonManagerCard } from './components/AddonManagerCard';
+
 // Removed KoFiDialog import as it was commented out
 // import { KoFiDialog } from 'react-kofi';
 // import 'react-kofi/dist/styles.css';
@@ -56,14 +58,17 @@ function App() {
       >
         {/* ... (rest of your component remains the same) ... */}
 
-        <div className="text-center mb-16">
+        <div className="mb-16 space-y-12">
           <motion.h1
-            className="text-4xl sm:text-6xl font-bold mb-6 gradient-text"
+            className="text-xl sm:text-6xl font-bold mb-6 gradient-text"
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5 }}
           >
             Ratings Aggregator
+            <div className="text-2xl sm:text-4xl font-normal text-gray-400">
+              : )
+            </div>
           </motion.h1>
           <motion.p
             className="text-xl text-gray-300 max-w-2xl mx-auto"
@@ -137,25 +142,31 @@ function App() {
         </motion.div>
 
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <RatingCard
-            title="Multiple Sources"
-            description="Aggregate ratings from IMDb, TMDb, Metacritic, and more"
-            icon="🎯"
+            title="Multi-Source Ratings"
+            description="Aggregate scores from IMDb, TMDb, Metacritic & more"
+            icon="📊"
           />
           <RatingCard
-            title="Parent Guidance"
-            description="Get age ratings and content warnings from Common Sense Media"
-            icon="👶"
+            title="Parental Guidance"
+            description="Age ratings & content warnings from Common Sense Media"
+            icon="👪"
           />
           <RatingCard
-            title="Content Warnings"
-            description="Detailed content warnings from CringeMDB"
-            icon="⚠️"
+            title="Content Insights"
+            description="Detailed content analysis from CringeMDB"
+            icon="🔍"
           />
-
         </div>
 
+        {/* i need space in between  */}
+        <div className="mt-8"></div>
+
+        <AddonManagerCard />
+
+        <div className='mt-8'></div>
+        
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
