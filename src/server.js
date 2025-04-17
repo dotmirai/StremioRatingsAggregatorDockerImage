@@ -27,7 +27,6 @@ async function startServer() {
     // Serve any static files you place in ./public
     // (e.g. your configure.html, CSS, images, etc.)
     const distPath = path.join(__dirname, '../frontend/dist');
-    console.log(distPath);
     app.use('/configure', express.static(distPath));
 
     // Custom configure route:

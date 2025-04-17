@@ -11,33 +11,41 @@ const connect = async () => {
         return redisClient;
     }
 
-    redisClient = createClient({ url: config.redis.url });
+    redisClient = createClient({
+        url: config.redis.url,
+        socket: {
+            // initial connect timeout
+            connectTimeout: 5000,
+            // reconnect strategy: wait X ms before each retry (capped at 2s), stop after 10 tries
+            reconnectStrategy: (attempts) => {
+                if (attempts > 10) {
+                    logger.error('Redis reconnect attempts exhausted.');
+                    return new Error('Retry time exhausted');
+                }
+                const delay = Math.min(attempts * 100, 2000);
+                logger.info(`Redis reconnecting in ${delay}ms (attempt #${attempts})`);
+                return delay;
+            }
+        }
+    });
 
     redisClient.on('error', (err) => {
-        logger.error('Redis Client Error:', err);
-        isConnected = false; // Mark as disconnected on error
-        // Optional: Implement retry logic here
-    });
-
-    redisClient.on('connect', () => {
-        logger.info('Connecting to Redis...');
-    });
-
-    redisClient.on('ready', () => {
-        logger.info('Redis client connected successfully.');
-        isConnected = true;
-    });
-
-    redisClient.on('end', () => {
-        logger.warn('Redis client connection closed.');
+        logger.error('Redis client error:', err);
         isConnected = false;
     });
 
+    redisClient.on('ready', () => {
+        logger.info('✅ Redis client is READY.');
+        isConnected = true;
+    });
+
+    // you can log the first connect attempt too if you want
+    logger.info('Attempting initial Redis connection…');
     try {
         await redisClient.connect();
     } catch (err) {
-        logger.error('Failed to connect to Redis initially:', err);
-        // Depending on strategy, you might exit or let the app run without cache
+        // .connect only throws if the reconnectStrategy returns an Error
+        logger.error('Fatal Redis connection failure:', err);
     }
 
     return redisClient;
@@ -45,9 +53,7 @@ const connect = async () => {
 
 const getClient = () => {
     if (!isConnected || !redisClient) {
-        logger.warn('Redis client requested but not connected.');
-        // Optionally try to reconnect here, or just return null/undefined
-        // return connect(); // Be careful with async initialization here
+        logger.warn('Redis client requested but not connected; returning null.');
         return null;
     }
     return redisClient;
