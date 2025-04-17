@@ -12,14 +12,28 @@
     }
   ],
   "routes": [
-    { "handle": "filesystem" },
     {
-      "src": "/(.*\\..*)",
-      "dest": "/frontend/dist/$1"
+      "src": "^/(manifest\\.json|stream/.*|remote/.*)$",
+      "dest": "/api/index.js"
     },
+
     {
-      "src": "/.*",
+      "src": "^/configure/assets/(.*)$",
+      "dest": "/frontend/dist/assets/$1"
+    },
+
+    {
+      "src": "^/configure(?:/.*)?$",
       "dest": "/frontend/dist/index.html"
+    },
+
+    {
+      "handle": "filesystem"
+    },
+
+    {
+      "src": "/",
+      "dest": "/configure/"
     }
   ],
   "env": {
