@@ -12,18 +12,22 @@
     },
     { 
       "src": "frontend/**",
-      "use": "@vercel/static" 
+      "use": "@vercel/static",
+      "config": {
+        "outputDirectory": "frontend/dist"
+      }
     }
   ],
   "rewrites": [
     { "source": "/manifest.json", "destination": "/api" },
-    { "source": "/configure/_assets/(.*)", "destination": "/frontend/dist/assets/$1" },
+    { "source": "/configure/assets/(.*)", "destination": "/frontend/dist/assets/$1" },
+    { "source": "/configure/(.*)", "destination": "/frontend/dist/index.html" },
     { "source": "/configure", "destination": "/frontend/dist/index.html" },
     { "source": "/(.*)", "destination": "/api" }
   ],
   "headers": [
     {
-      "source": "/configure/_assets/(.*)",
+      "source": "/configure/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]

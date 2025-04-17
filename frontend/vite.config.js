@@ -6,11 +6,15 @@ export default defineConfig({
   plugins: [react()],
   base: '/configure/',
   build: {
-    outDir: path.resolve(__dirname, 'dist'), // Changed to local dist
+    outDir: path.resolve(__dirname, 'dist'),
+    assetsDir: 'assets',
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html') // Correct path
+        main: path.resolve(__dirname, 'index.html')
+      },
+      output: {
+        assetFileNames: 'assets/[name]-[hash][extname]'
       }
     }
   }
