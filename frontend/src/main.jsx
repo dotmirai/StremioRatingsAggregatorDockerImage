@@ -1,3 +1,7 @@
+// Add this at the top
+import.meta.env.BASE_URL = '/configure/';
+
+// Rest of your existing code
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'

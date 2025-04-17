@@ -3,10 +3,16 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/configure/',
+  base: '/',
   build: {
     outDir: '../frontend/dist',
     emptyOutDir: true,
-    manifest: true
+    assetsDir: 'assets',
+    manifest: true,
+    rollupOptions: {
+      output: {
+        assetFileNames: 'assets/[name]-[hash][extname]'
+      }
+    }
   }
 })
