@@ -4,9 +4,7 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "config": { "distDir": "dist" }
     },
     {
       "src": "api/index.js",
@@ -14,39 +12,18 @@
     }
   ],
   "routes": [
-    {
-      "src": "^/configure/?$",
-      "dest": "/frontend/index.html"
-    },
-    {
-      "src": "^/$",
-      "dest": "/frontend/index.html"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/assets/$1"
-    },
+    { "handle": "filesystem" },
     {
       "src": "/(.*\\..*)",
-      "dest": "/frontend/$1"
-    },
-    {
-      "src": "^/(manifest\\.json|stream/.*|remote/.*)$",
-      "dest": "/api/index.js"
-    },
-    {
-      "handle": "filesystem"
+      "dest": "/frontend/dist/$1"
     },
     {
       "src": "/.*",
-      "dest": "/frontend/index.html"
+      "dest": "/frontend/dist/index.html"
     }
   ],
   "env": {
     "NODE_ENV": "production",
     "PORT": "3000"
-  },
-  "github": {
-    "silent": true
   }
 }
