@@ -2,7 +2,6 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const config = require('../config');
 const logger = require('../utils/logger');
-const getStreamNameAndYear = require('../utils/getStreamName'); // Use updated utility
 
 const PROVIDER_NAME = 'CringeMDB';
 

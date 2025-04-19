@@ -1,165 +1,147 @@
 const redisClient = require('../cache/redisClient');
 const config = require('../config');
 const logger = require('../utils/logger');
-const getStreamNameAndYear = require('../utils/getStreamName');
-const providers = require('../providers'); // Import all exported providers
-const getTmdbId = require('../utils/getTmdbId');
+const { getTmdbData } = require('../utils/tmdbService');
+const providers = require('../providers');
 
 const CACHE_PREFIX = 'ratings:';
 
-// List of active provider functions to call
+// Providers that return { source, value } or array thereof
 const activeProviders = [
     providers.imdbProvider,
     providers.tmdbProvider,
     providers.metacriticProvider,
     providers.commonSenseProvider,
     providers.cringeMdbProvider,
-    // Add Letterboxd/RT here if implemented
+    // extend here...
 ];
 
-// Helper to normalize or format rating values slightly if needed
-function processSingleRating(rating) {
-    if (!rating || !rating.source || !rating.value) {
-        return null; // Invalid rating object
+/**
+ * Calculate a dynamic TTL (in seconds) based on the age of the content.
+ * @param {string|null} releaseDate - ISO date string (e.g., "2023-08-15") or null
+ * @param {number} numRatings - Number of collected ratings
+ * @returns {number} TTL in seconds
+ */
+function calculateTTL(releaseDate, numRatings) {
+    if (!releaseDate) {
+        // Fallback: use default TTL
+        return config.cache.ttlSeconds;
     }
 
-    // Example: Trim whitespace from value
-    rating.value = rating.value.toString().trim();
+    const now = Date.now();
+    const released = new Date(releaseDate).getTime();
+    const ageDays = Math.floor((now - released) / (1000 * 60 * 60 * 24));
 
-    // Ensure essential fields exist
+    let ttl;
+    if (ageDays <= 14) {
+        ttl = 1 * 24 * 60 * 60; // 1 day
+    } else if (ageDays <= 30) {
+        ttl = 7 * 24 * 60 * 60; // 7 days
+    } else if (ageDays <= 90) {
+        ttl = 30 * 24 * 60 * 60; // 1 month
+    } else if (ageDays <= 180) {
+        ttl = 60 * 24 * 60 * 60; // 2 months
+    } else if (ageDays <= 365) {
+        ttl = 120 * 24 * 60 * 60; // 4 months
+    } else if (ageDays <= 2 * 365) {
+        ttl = 240 * 24 * 60 * 60; // 8 months
+    } else if (ageDays <= 4 * 365) {
+        ttl = 730 * 24 * 60 * 60; // 2 years
+    } else {
+        ttl = 4 * 365 * 24 * 60 * 60; // 4 years
+    }
+
+    // If few ratings found, reduce TTL assuming scrape failure
+    if (numRatings <= 3) {
+        ttl = Math.min(ttl, 3 * 24 * 60 * 60); // cap at 3 days
+    }
+
+    return ttl;
+}
+
+/** Normalize a single provider rating object */
+function processSingleRating(rating) {
+    if (!rating || !rating.source || !rating.value) {
+        return null;
+    }
     return {
         source: rating.source,
-        value: rating.value,
-        url: rating.url || null, // Ensure URL exists or is null
-        type: rating.type || null, // Ensure type exists or is null
+        value: rating.value.toString().trim(),
     };
 }
 
 /**
- * Fetches ratings, using cache first, then aggregating from providers.
- * @param {string} type - 'movie' or 'series'
- * @param {string} imdbId - IMDb ID (e.g., "tt1234567" or "tt1234567:1:1")
- * @returns {Promise<Array|null>} Array of rating objects or null if error/no data
+ * Aggregates ratings for a given IMDb ID and type.
+ * Uses Redis cache, falls back to providers, then updates cache with dynamic TTL.
+ *
+ * @param {'movie'|'series'} type
+ * @param {string} imdbId  IMDb ID, may include :S:E suffix
+ * @returns {Promise<Array<{source:string,value:string}>|null>}
  */
 async function getRatings(type, imdbId) {
-    const rawImbdId = imdbId; // Keep the original ID for logging
-    imdbId = imdbId.split(':')[0]; // Use base ID for logging consistency
-    const cacheKey = `${CACHE_PREFIX}${type}:${imdbId}`; // Cache key format
+    const baseId = imdbId.split(':')[0];
+    const cacheKey = `${CACHE_PREFIX}${type}:${baseId}`;
 
-    console.log(cacheKey);
-
-    // 1. Check Cache
+    // 1) Try cache
     if (redisClient.isReady()) {
         try {
-            const cachedData = await redisClient.get(cacheKey);
-            if (cachedData) {
-                logger.info(`Cache HIT for ${imdbId}`);
-                return cachedData; // Return data directly from cache
+            const cached = await redisClient.get(cacheKey);
+            if (cached) {
+                logger.info(`Cache HIT for ${baseId}`);
+                return cached;
             }
-            logger.info(`Cache MISS for ${imdbId}`);
+            logger.info(`Cache MISS for ${baseId}`);
         } catch (err) {
-            logger.error(`Redis GET error for key ${cacheKey}: ${err.message}`);
-            // Continue to fetch from providers even if cache read fails
+            logger.error(`Redis GET error for ${cacheKey}: ${err.message}`);
         }
     } else {
-        logger.warn(`Redis not ready, skipping cache check for ${imdbId}.`);
+        logger.warn(`Redis not ready; skipping cache for ${baseId}.`);
     }
 
-    // 2. Fetch from Providers if Cache Miss
-    logger.info(`Aggregating ratings for ${imdbId} (${type}) from providers...`);
-    let streamInfo = null; // Store stream info once
-    let tmdbId = null; // Store TMDB ID if needed
+    logger.info(`Aggregating ratings for ${baseId} (${type}) from providers...`);
 
-    try {
-        // Fetch stream name/year needed by some scrapers *once*
-        // Check if any active scraper provider actually needs it
-        const needsStreamInfo = activeProviders.some(p =>
-            ['Metacritic', 'Common Sense', 'CringeMDB'].includes(p.name) // Add others if needed
-        );
-
-        // fetch tmdb id 
-        if (!tmdbId) {
-            tmdbId = await getTmdbId(imdbId, type);
-            if (!tmdbId) {
-                logger.warn(`Could not retrieve TMDB ID for ${imdbId}, some scrapers might fail.`);
-            }
-        }
-
-        if (needsStreamInfo) {
-            logger.debug(`Workspaceing stream metadata for ${imdbId} as scrapers need it.`);
-            streamInfo = await getStreamNameAndYear(imdbId, type, tmdbId);
-            if (!streamInfo) {
-                logger.warn(`Could not retrieve stream metadata for ${imdbId}, some scrapers might fail.`);
-            }
-        } else {
-            logger.debug(`Skipping stream metadata fetch for ${imdbId} as no active scraper requires it.`);
-        }
-
-
-        // Fetch from all active providers in parallel, collecting all results (success or failure)
-        const providerPromises = activeProviders.map(provider =>
-            provider.getRating(type, rawImbdId, streamInfo, tmdbId) // Pass streamInfo if fetched
-                .then(result => ({ status: 'fulfilled', value: result, provider: provider.name }))
-                .catch(error => ({ status: 'rejected', reason: error, provider: provider.name }))
-        );
-
-        // Use Promise.allSettled to wait for all promises regardless of outcome
-        const results = await Promise.allSettled(providerPromises);
-
-        let allRatings = [];
-        results.forEach(result => {
-            // Log provider success/failure from the settled result
-            if (result.status === 'fulfilled') {
-                const providerName = result.value.provider; // Get provider name from wrapped result
-                const ratingData = result.value.value; // Get actual rating data
-
-                if (ratingData) {
-                    // Process single rating or array of ratings
-                    const processed = Array.isArray(ratingData)
-                        ? ratingData.map(processSingleRating).filter(Boolean)
-                        : [processSingleRating(ratingData)].filter(Boolean);
-
-                    if (processed.length > 0) {
-                        logger.debug(` -> Success from ${providerName}${processed.length > 1 ? ' (multiple)' : ''}`);
-                        allRatings = allRatings.concat(processed);
-                    } else {
-                        logger.debug(` -> ${providerName} returned no valid rating data.`);
-                    }
-                } else {
-                    logger.debug(` -> ${providerName} returned null.`);
-                }
-            } else { // status === 'rejected'
-                const providerName = result.reason.provider; // Get provider name from wrapped error
-                logger.error(` -> Error from ${providerName}: ${result.reason.reason?.message || result.reason.reason || 'Unknown error'}`);
-            }
-        });
-
-
-        logger.info(`Finished aggregation for ${imdbId}, found ${allRatings.length} valid ratings.`);
-
-        // 3. Update Cache if data was fetched and Redis is available
-        if (allRatings.length > 0 && redisClient.isReady()) {
-            try {
-                await redisClient.set(cacheKey, allRatings, config.cache.ttlSeconds);
-            } catch (err) {
-                logger.error(`Redis SET error for key ${cacheKey}: ${err.message}`);
-                // Failure to cache is not critical, just log it
-            }
-        } else if (allRatings.length === 0) {
-            logger.warn(`No ratings found for ${imdbId} after checking all providers.`);
-            // Optional: Cache an empty result for a shorter duration to prevent constant re-fetching?
-            // await redisClient.set(cacheKey, [], 3600); // Cache empty for 1 hour
-        }
-
-        return allRatings.length > 0 ? allRatings : null; // Return null if absolutely nothing found
-
-    } catch (error) {
-        // Catch errors from initial getStreamNameAndYear or other unexpected issues
-        logger.error(`FATAL: Unexpected error during rating aggregation for ${imdbId}: ${error.message}`, error);
-        return null; // Return null on major failure
+    // 2) Fetch TMDB data (ID + metadata) once
+    const { tmdbId, name, date } = await getTmdbData(imdbId, type);
+    if (!tmdbId) {
+        logger.warn(`No TMDB ID for ${baseId}; some providers may fail.`);
     }
+
+    const year = date ? new Date(date).getFullYear().toString() : null;
+    const streamInfo = { name, year };
+
+    // 3) Fetch from all providers in parallel
+    const promises = activeProviders.map(provider =>
+        provider
+            .getRating(type, imdbId, streamInfo, tmdbId)
+            .catch(err => {
+                logger.error(`Error from ${provider.name}: ${err.message}`);
+                return null;
+            })
+    );
+
+    const results = await Promise.all(promises);
+
+    // 4) Process and dedupe ratings, dropping any nulls
+    const allRatings = results
+        .filter(ratingData => ratingData)
+        .flatMap(data => (Array.isArray(data) ? data : [data]))
+        .map(processSingleRating)
+        .filter(r => r);
+
+    logger.info(`Found ${allRatings.length} ratings for ${baseId}.`);
+
+    // 5) Cache if we got any, using dynamic TTL based on release date and rating count
+    if (allRatings.length > 0 && redisClient.isReady()) {
+        const ttlSeconds = calculateTTL(date, allRatings.length);
+        try {
+            await redisClient.set(cacheKey, allRatings, ttlSeconds);
+            logger.debug(`Cached ${baseId} with TTL ${ttlSeconds}s`);
+        } catch (err) {
+            logger.error(`Redis SET error for ${cacheKey}: ${err.message}`);
+        }
+    }
+
+    return allRatings.length > 0 ? allRatings : null;
 }
 
-module.exports = {
-    getRatings,
-};
+module.exports = { getRatings };

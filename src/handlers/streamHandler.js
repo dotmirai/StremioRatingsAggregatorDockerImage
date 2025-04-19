@@ -88,7 +88,7 @@ async function streamHandler({ type, id }) {
             name: "📊 Ratings Aggregator ", // Main title for the stream item
             description: formattedLines.join('\n'),
             // Use IMDb URL as a fallback/reference if no specific rating URL is best
-            externalUrl: ratings.find(r => r.source === 'IMDb')?.url || `${config.sources.imdbBaseUrl}/title/${id.split(':')[0]}/`,
+            externalUrl: `${config.sources.imdbBaseUrl}/title/${id.split(':')[0]}/`,
             behaviorHints: {
                 notWebReady: true, // Important: Indicates this isn't a playable video stream
                 bingeGroup: `ratings-${id}` // Group rating streams together for an item
