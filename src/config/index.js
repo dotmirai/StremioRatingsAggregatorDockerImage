@@ -24,7 +24,7 @@ const config = {
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     addon: {
         id: 'community.ratings.aggregator',
-        version: '1.0.1',
+        version: '1.5.0',
         name: '🎯 Ratings Aggregator',
         description: 'Aggregated ratings from IMDb, TMDb, Metacritic, Common Sense, CringeMDB and more.',
         catalogs: [], // No catalogs offered
