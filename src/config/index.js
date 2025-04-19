@@ -1,8 +1,12 @@
+// config/index.js
 require('dotenv').config();
 
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
+    http: { // Added HTTP config section
+        requestTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS || '12000', 10), // 12 seconds default
+    },
     tmdb: {
         apiKey: process.env.TMDB_API_KEY,
         apiUrl: 'https://api.themoviedb.org/3',
@@ -11,26 +15,27 @@ const config = {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
     },
     cache: {
-        // Default TTL: 24 hours in seconds
-        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '172800', 10),
+        // Default TTL: 3 days in seconds (adjust as needed)
+        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '259200', 10), // 3 * 24 * 60 * 60
+        // Keep shorter negative TTL from previous step
+        negativeTtlSeconds: parseInt(process.env.NEGATIVE_CACHE_TTL_SECONDS || '21600', 10), // 6 hours
     },
     sources: {
-        imdbBaseUrl: 'https://www.imdb.com',
-        metacriticBaseUrl: 'https://www.metacritic.com',
-        commonSenseBaseUrl: 'https://www.commonsensemedia.org',
-        cringeMdbBaseUrl: 'https://cringemdb.com',
-        // Add other base URLs if needed
+        imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
+        metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
+        commonSenseBaseUrl: process.env.COMMONSENSE_BASE_URL || 'https://www.commonsensemedia.org',
+        cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
     },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36', // Update UA periodically
     addon: {
         id: 'community.ratings.aggregator',
-        version: '1.5.0',
+        version: '1.5.1', // Incremented version
         name: '🎯 Ratings Aggregator',
         description: 'Aggregated ratings from IMDb, TMDb, Metacritic, Common Sense, CringeMDB and more.',
-        catalogs: [], // No catalogs offered
+        catalogs: [],
         resources: ['stream'],
         types: ['movie', 'series'],
-        idPrefixes: ['tt'], // Only react to IMDb IDs
+        idPrefixes: ['tt'],
         behaviorHints: {
             configurable: true,
             configurationRequired: false,
@@ -38,15 +43,47 @@ const config = {
     }
 };
 
-// Validate essential config
+// --- Validations ---
+let hasFatalError = false;
+let hasWarning = false;
+
+// Essential
 if (!config.tmdb.apiKey) {
-    console.error('FATAL ERROR: TMDB_API_KEY is not set in the environment variables (.env file).');
-    console.error('Please get a key from https://www.themoviedb.org/ and add it to your .env file.');
-    process.exit(1); // Exit if key is missing
+    console.error('FATAL ERROR: TMDB_API_KEY is not set.');
+    hasFatalError = true;
 }
-if (!config.redis.url) {
-    console.warn('WARNING: REDIS_URL is not set. Caching will likely fail. Defaulting to redis://localhost:6379');
+if (!config.redis.url || config.redis.url === 'redis://localhost:6379') {
+    // Only warn if it's missing or default, allow explicit localhost
+    if (!process.env.REDIS_URL) {
+        console.warn('WARNING: REDIS_URL is not set. Caching will use default redis://localhost:6379.');
+        hasWarning = true;
+    }
 }
 
+// Base URLs for scrapers
+if (!config.sources.imdbBaseUrl) {
+    console.warn('WARNING: IMDB_BASE_URL is not set. IMDb provider may fail.');
+    hasWarning = true;
+}
+if (!config.sources.metacriticBaseUrl) {
+    console.warn('WARNING: METACRITIC_BASE_URL is not set. Metacritic provider may fail.');
+    hasWarning = true;
+}
+if (!config.sources.commonSenseBaseUrl) {
+    console.warn('WARNING: COMMONSENSE_BASE_URL is not set. Common Sense provider may fail.');
+    hasWarning = true;
+}
+if (!config.sources.cringeMdbBaseUrl) {
+    console.warn('WARNING: CRINGEMDB_BASE_URL is not set. CringeMDB provider may fail.');
+    hasWarning = true;
+}
+
+// Log summary
+if (hasFatalError) {
+    console.error("Critical configuration missing. Please check environment variables. Exiting.");
+    process.exit(1);
+} else if (hasWarning) {
+    console.warn("One or more configuration warnings detected. Service might not function fully.");
+}
 
 module.exports = config;

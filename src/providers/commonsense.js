@@ -1,96 +1,110 @@
-const axios = require('axios');
+// providers/commonSenseProvider.js
 const cheerio = require('cheerio');
 const config = require('../config');
 const logger = require('../utils/logger');
+const { getPage } = require('../utils/httpClient'); // Use shared client
+const { formatTitleForUrlSlug } = require('../utils/urlFormatter'); // Use shared formatter
 
 const PROVIDER_NAME = 'Common Sense';
+const BASE_URL = config.sources.commonSenseBaseUrl;
 
-// Helper to generate Common Sense Media direct URL
+/**
+ * Generates the Common Sense Media URL for a given title and type.
+ * @param {string} title - Movie or series title.
+ * @param {'movie'|'series'} type - Content type.
+ * @returns {string|null} The constructed URL or null if title/base URL is missing.
+ */
 function getCommonSenseUrl(title, type) {
-    // Format title for URL:
-    // 1. Convert to lowercase
-    // 2. Remove special characters except hyphens and spaces
-    // 3. Replace spaces with hyphens
-    // 4. Remove consecutive hyphens
-    const formattedTitle = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
+    if (!title || !BASE_URL) return null;
 
-    // Determine review type path
+    const formattedTitle = formatTitleForUrlSlug(title);
+    if (!formattedTitle) return null; // Handle empty title after formatting
+
     const reviewType = type === 'series' ? 'tv-reviews' : 'movie-reviews';
-
-    return `${config.sources.commonSenseBaseUrl}/${reviewType}/${formattedTitle}`;
+    return `${BASE_URL}/${reviewType}/${formattedTitle}`;
 }
 
-async function scrapeCommonSensePage(url) {
+/**
+ * Scrapes the Common Sense Media page to extract the age rating.
+ * @param {string} htmlContent - The HTML content of the page.
+ * @param {string} url - The URL scraped (for logging and result).
+ * @returns {object|null} The rating object { source, type, value, url } or null if not found.
+ */
+function scrapeCommonSensePage(htmlContent, url) {
     try {
-        logger.debug(`${PROVIDER_NAME}: Scraping page ${url}`);
-        const response = await axios.get(url, {
-            headers: { 'User-Agent': config.userAgent },
-            timeout: 10000
-        });
+        const $ = cheerio.load(htmlContent);
 
-        const $ = cheerio.load(response.data);
+        // Selector targeting the age rating span
+        const ageRatingSelector = 'span.rating__age';
+        let ageRatingText = $(ageRatingSelector).first().text().trim();
 
-        // Updated selector for age rating
-        let ageRating = $('span.rating__age').first().text().trim();
+        if (!ageRatingText) {
+            logger.debug(`[${PROVIDER_NAME}] Age rating selector ('${ageRatingSelector}') not found on page ${url}`);
+            return null;
+        }
 
         // Clean up "age 10+" -> "10+"
-        ageRating = ageRating.replace(/^age\s*/i, '').trim();
+        const ageRatingValue = ageRatingText.replace(/^age\s*/i, '').trim();
 
-        if (ageRating) {
-            logger.debug(`${PROVIDER_NAME}: Found Age Rating: ${ageRating}`);
+        if (ageRatingValue) {
+            logger.debug(`[${PROVIDER_NAME}] Found Age Rating: ${ageRatingValue} at ${url}`);
             return {
                 source: PROVIDER_NAME,
-                type: 'Age Rating',
-                value: ageRating,
+                type: 'Age Rating', // Clarify the type of rating
+                value: ageRatingValue,
                 url: url,
             };
         } else {
-            logger.warn(`${PROVIDER_NAME}: Could not find age rating on page ${url}`);
+            logger.warn(`[${PROVIDER_NAME}] Found age rating element but text was empty or invalid at ${url}`);
             return null;
         }
     } catch (error) {
-        if (error.response?.status === 404) {
-            logger.warn(`${PROVIDER_NAME}: Page not found (404) at ${url}`);
-        } else if (error.response) {
-            logger.error(`${PROVIDER_NAME}: HTTP Error scraping page ${url}: ${error.response.status}`);
-        } else {
-            logger.error(`${PROVIDER_NAME}: Network or parsing error scraping page ${url}: ${error.message}`);
-        }
-        return null;
+        logger.error(`[${PROVIDER_NAME}] Cheerio parsing error for ${url}: ${error.message}`);
+        return null; // Error during scraping
     }
 }
 
+/**
+ * Fetches the age rating from Common Sense Media.
+ * @param {'movie'|'series'} type - Content type.
+ * @param {string} imdbId - IMDb ID (for logging).
+ * @param {object} streamInfo - Object containing title ({ name: string }).
+ * @returns {Promise<object|null>} A rating object or null.
+ */
 async function getRating(type, imdbId, streamInfo) {
-    logger.debug(`${PROVIDER_NAME}: Fetching rating for ${imdbId} (${type})`);
-
-    try {
-        if (!streamInfo?.name) {
-            logger.warn(`${PROVIDER_NAME}: Cannot proceed without title/name for ${imdbId}.`);
-            return null;
-        }
-
-        // Use direct URL construction instead of search
-        const targetUrl = getCommonSenseUrl(streamInfo.name, type);
-
-        logger.debug(`${PROVIDER_NAME}: Trying direct URL: ${targetUrl}`);
-
-        const rating = await scrapeCommonSensePage(targetUrl);
-
-        if (!rating) {
-            logger.debug(`${PROVIDER_NAME}: No rating found for ${streamInfo.name} at ${targetUrl}`);
-            return null;
-        }
-
-        return rating;
-    } catch (error) {
-        logger.error(`${PROVIDER_NAME}: Unexpected error getting rating for ${imdbId}: ${error.message}`);
+    if (!streamInfo?.name) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Missing title.`);
         return null;
     }
+    if (!BASE_URL) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Base URL not configured.`);
+        return null;
+    }
+
+    const targetUrl = getCommonSenseUrl(streamInfo.name, type);
+    if (!targetUrl) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Could not construct URL for title "${streamInfo.name}".`);
+        return null;
+    }
+
+    logger.debug(`[${PROVIDER_NAME}] Attempting fetch for ${imdbId} from ${targetUrl}`);
+
+    const response = await getPage(targetUrl, PROVIDER_NAME);
+
+    // Handle failed requests (already logged in getPage)
+    if (!response || response.status !== 200) {
+        // Note: 404 is common and expected if CSM doesn't have a review
+        return null;
+    }
+
+    // Scrape the HTML content
+    const rating = scrapeCommonSensePage(response.data, targetUrl);
+
+    if (!rating) {
+        logger.debug(`[${PROVIDER_NAME}] No rating found via scraping for ${imdbId} at ${targetUrl}`);
+    }
+
+    return rating; // Return the rating object or null
 }
 
 module.exports = {

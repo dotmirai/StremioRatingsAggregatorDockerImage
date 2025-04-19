@@ -1,148 +1,150 @@
-const axios = require('axios');
+// providers/metacriticProvider.js
 const cheerio = require('cheerio');
 const config = require('../config');
 const logger = require('../utils/logger');
+const { getPage } = require('../utils/httpClient');
+const { formatTitleForUrlSlug } = require('../utils/urlFormatter');
 
 const PROVIDER_NAME = 'Metacritic';
+const BASE_URL = config.sources.metacriticBaseUrl;
 
-// Helper to generate Metacritic URL (direct approach)
-function getMetacriticUrl(title, type, year = null) {
+/**
+ * Generates the Metacritic URL.
+ * @param {string} title - Content title.
+ * @param {'movie'|'series'} type - Content type.
+ * @returns {string|null} The URL or null if data missing.
+ */
+function getMetacriticUrl(title, type) {
+    if (!title || !BASE_URL) return null;
+
     const mediaType = type === 'series' ? 'tv' : 'movie';
+    const formattedTitle = formatTitleForUrlSlug(title);
+    if (!formattedTitle) return null;
 
-    // Format title: lowercase, replace spaces and special chars with hyphens
-    const formattedTitle = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric chars with hyphens
-        .replace(/-+/g, '-')          // Replace multiple hyphens with single hyphen
-        .replace(/^-|-$/g, '');       // Remove leading/trailing hyphens
-
-    return `${config.sources.metacriticBaseUrl}/${mediaType}/${formattedTitle}`;
+    return `${BASE_URL}/${mediaType}/${formattedTitle}`;
 }
 
-// Update the scrapeMetacriticPage function
-async function scrapeMetacriticPage(url) {
+/**
+ * Scrapes the Metacritic page for Metascore and User Score.
+ * @param {string} htmlContent - HTML content.
+ * @param {string} url - Scraped URL.
+ * @returns {Array<object>|null} Array of rating objects or null.
+ */
+function scrapeMetacriticPage(htmlContent, url) {
     try {
-        logger.debug(`${PROVIDER_NAME}: Scraping page ${url}`);
-        const response = await axios.get(url, {
-            headers: {
-                'User-Agent': config.userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Cache-Control': 'max-age=0'
-            },
-            timeout: 10000
-        });
-        const $ = cheerio.load(response.data);
+        const $ = cheerio.load(htmlContent);
         const ratings = [];
 
         // --- Metascore (Critics) ---
-        const criticScoreInfo = $('[data-testid="critic-score-info"]');
-        if (criticScoreInfo.length) {
-            // Find score element using the new structure
-            const criticScore = criticScoreInfo
-                .find('.c-siteReviewScore span')
-                .first()
-                .text()
-                .trim();
+        // Selectors based on current Metacritic structure (data-testid seems robust)
+        const criticScoreSelector = '[data-testid="critic-score-info"] .c-siteReviewScore span';
+        const criticCountSelector = '[data-testid="critic-score-info"] .c-productScoreInfo_reviewsTotal span';
 
-            // Get review count if needed (optional)
-            const criticCountText = criticScoreInfo
-                .find('.c-productScoreInfo_reviewsTotal span')
-                .text()
-                .trim();
-            const criticCountMatch = criticCountText.match(/Based on (\d+) Critic/i);
-            const criticCount = criticCountMatch ? parseInt(criticCountMatch[1], 10) : null;
+        const criticScoreText = $(criticScoreSelector).first().text().trim();
+        if (criticScoreText && /^\d+$/.test(criticScoreText)) {
+            const criticScore = parseInt(criticScoreText, 10);
+            if (criticScore >= 0 && criticScore <= 100) {
+                // Extract count (optional)
+                const criticCountText = $(criticCountSelector).text().trim();
+                const criticCountMatch = criticCountText.match(/Based on (\d+) Critic/i);
+                const criticCount = criticCountMatch ? parseInt(criticCountMatch[1], 10) : null;
 
-            if (criticScore && /^\d+$/.test(criticScore)) {
-                logger.debug(`${PROVIDER_NAME}: Found Metascore ${criticScore}/100 (${criticCount} critics)`);
+                logger.debug(`[${PROVIDER_NAME}] Found Metascore ${criticScore}/100` + (criticCount ? ` (${criticCount} critics)` : ''));
                 ratings.push({
-                    source: 'MC',
+                    source: 'MC', // Distinguish source
                     type: 'Critics',
                     value: `${criticScore}/100`,
-                    count: criticCount,
+                    count: criticCount, // Optional count
                     url: url
                 });
+            } else {
+                logger.warn(`[${PROVIDER_NAME}] Parsed critic score ${criticScore} is outside 0-100 range at ${url}.`);
             }
-        }
+        } else if (criticScoreText) {
+            logger.warn(`[${PROVIDER_NAME}] Found critic score text "${criticScoreText}" but failed validation at ${url}.`);
+        } // If selector not found, it just doesn't push.
 
         // --- User Score ---
-        const userScoreInfo = $('[data-testid="user-score-info"]');
-        if (userScoreInfo.length) {
-            // Find user score using the new structure
-            const userScore = userScoreInfo
-                .find('.c-siteReviewScore span')
-                .first()
-                .text()
-                .trim();
+        const userScoreSelector = '[data-testid="user-score-info"] .c-siteReviewScore span';
+        const userCountSelector = '[data-testid="user-score-info"] .c-productScoreInfo_reviewsTotal span';
 
-            // Get user review count if needed (optional)
-            const userCountText = userScoreInfo
-                .find('.c-productScoreInfo_reviewsTotal span')
-                .text()
-                .trim();
-            const userCountMatch = userCountText.match(/Based on (\d+) User/i);
-            const userCount = userCountMatch ? parseInt(userCountMatch[1], 10) : null;
+        const userScoreText = $(userScoreSelector).first().text().trim();
+        // User score can be 'tbd' or decimal
+        if (userScoreText && /^\d+(\.\d+)?$/.test(userScoreText)) {
+            const userScore = parseFloat(userScoreText);
+            if (userScore >= 0 && userScore <= 10) {
+                // Extract count (optional)
+                const userCountText = $(userCountSelector).text().trim();
+                const userCountMatch = userCountText.match(/Based on (\d+) User/i);
+                const userCount = userCountMatch ? parseInt(userCountMatch[1], 10) : null;
 
-            // User score can be decimal (e.g., "6.1")
-            if (userScore && /^\d+(\.\d+)?$/.test(userScore)) {
-                logger.debug(`${PROVIDER_NAME}: Found User Score ${userScore}/10 (${userCount} users)`);
+                logger.debug(`[${PROVIDER_NAME}] Found User Score ${userScore}/10` + (userCount ? ` (${userCount} users)` : ''));
                 ratings.push({
-                    source: 'MC Users',
+                    source: 'MC Users', // Distinguish source
                     type: 'Users',
                     value: `${userScore}/10`,
-                    count: userCount,
+                    count: userCount, // Optional count
                     url: url
                 });
+            } else {
+                logger.warn(`[${PROVIDER_NAME}] Parsed user score ${userScore} is outside 0-10 range at ${url}.`);
             }
-        }
+        } else if (userScoreText && userScoreText.toLowerCase() !== 'tbd') {
+            logger.warn(`[${PROVIDER_NAME}] Found user score text "${userScoreText}" but failed validation at ${url}.`);
+        } // Ignore 'tbd' scores silently
 
         if (ratings.length === 0) {
-            logger.debug(`${PROVIDER_NAME}: No valid ratings found on page ${url}`);
-        }
-
-        return ratings.length > 0 ? ratings : null;
-
-    } catch (error) {
-        if (error.response?.status === 404) {
-            logger.warn(`${PROVIDER_NAME}: Page not found (404) at ${url}`);
-        } else if (error.response) {
-            logger.error(`${PROVIDER_NAME}: HTTP Error scraping page ${url}: ${error.response.status}`);
-        } else {
-            logger.error(`${PROVIDER_NAME}: Network or parsing error scraping page ${url}: ${error.message}`);
-        }
-        return null;
-    }
-}
-
-async function getRating(type, imdbId, streamInfo) {
-    logger.debug(`${PROVIDER_NAME}: Fetching ratings for ${imdbId} (${type})`);
-
-    try {
-        // Check if we have the required stream info
-        if (!streamInfo?.name) {
-            logger.warn(`${PROVIDER_NAME}: Cannot proceed without title/name for ${imdbId}.`);
-            return null;
-        }
-
-        // Get direct URL
-        const targetUrl = getMetacriticUrl(streamInfo.name, type, streamInfo.year);
-        logger.debug(`${PROVIDER_NAME}: Attempting to fetch from ${targetUrl}`);
-
-        const ratings = await scrapeMetacriticPage(targetUrl);
-
-        if (!ratings || ratings.length === 0) {
-            logger.debug(`${PROVIDER_NAME}: No ratings found for ${streamInfo.name} at ${targetUrl}`);
+            logger.debug(`[${PROVIDER_NAME}] No valid Metacritic ratings found via scraping on page ${url}`);
             return null;
         }
 
         return ratings;
+
     } catch (error) {
-        logger.error(`${PROVIDER_NAME}: Unexpected error getting ratings for ${imdbId}: ${error.message}`);
+        logger.error(`[${PROVIDER_NAME}] Cheerio parsing error for ${url}: ${error.message}`);
         return null;
     }
+}
+
+/**
+ * Fetches ratings from Metacritic.
+ * @param {'movie'|'series'} type - Content type.
+ * @param {string} imdbId - IMDb ID (for logging).
+ * @param {object} streamInfo - Object containing { name: string, year?: string }.
+ * @returns {Promise<Array<object>|null>} An array of rating objects or null.
+ */
+async function getRating(type, imdbId, streamInfo) {
+    if (!streamInfo?.name) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Missing title.`);
+        return null;
+    }
+    if (!BASE_URL) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Base URL not configured.`);
+        return null;
+    }
+
+    const targetUrl = getMetacriticUrl(streamInfo.name, type);
+    if (!targetUrl) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Could not construct URL for "${streamInfo.name}".`);
+        return null;
+    }
+
+    logger.debug(`[${PROVIDER_NAME}] Attempting fetch for ${imdbId} from ${targetUrl}`);
+
+    const response = await getPage(targetUrl, PROVIDER_NAME);
+
+    if (!response || response.status !== 200) {
+        // Common for Metacritic to 404 if title match isn't exact
+        return null;
+    }
+
+    const ratings = scrapeMetacriticPage(response.data, targetUrl);
+
+    if (!ratings) {
+        logger.debug(`[${PROVIDER_NAME}] No ratings found via scraping for ${imdbId} at ${targetUrl}`);
+    }
+
+    return ratings; // Return array or null
 }
 
 module.exports = {

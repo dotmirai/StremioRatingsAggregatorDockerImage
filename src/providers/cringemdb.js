@@ -1,131 +1,153 @@
-const axios = require('axios');
+// providers/cringeMdbProvider.js
 const cheerio = require('cheerio');
 const config = require('../config');
 const logger = require('../utils/logger');
+const { getPage } = require('../utils/httpClient');
+const { formatTitleForUrlSlug } = require('../utils/urlFormatter');
 
 const PROVIDER_NAME = 'CringeMDB';
+const BASE_URL = config.sources.cringeMdbBaseUrl;
 
-// CringeMDB URL structure seems relatively stable
+/**
+ * Constructs the CringeMDB URL.
+ * @param {string} title - Movie title.
+ * @param {string} releaseYear - Movie release year.
+ * @returns {string|null} The URL or null if data is missing.
+ */
 function getCringeMDBUrl(title, releaseYear) {
-    // Format title: lowercase, alphanumeric and space only, replace space with dash
+    if (!title || !releaseYear || !BASE_URL) return null;
+
+    // CringeMDB uses a slightly different slug (no spaces, alphanumeric only)
     const formattedTitle = title
         .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '') // Remove non-alphanumeric/space
-        .trim() // Trim whitespace
-        .replace(/\s+/g, '-'); // Replace spaces with dashes
+        .replace(/[^a-z0-9\s]/g, '') // Keep spaces temporarily
+        .trim()
+        .replace(/\s+/g, '-'); // Replace spaces with hyphens
 
-    if (!formattedTitle || !releaseYear) return null;
+    if (!formattedTitle) return null;
 
-    return `${config.sources.cringeMdbBaseUrl}/movie/${formattedTitle}-${releaseYear}`;
+    return `${BASE_URL}/movie/${formattedTitle}-${releaseYear}`;
 }
 
-async function scrapeCringeMDBPage(url) {
+/**
+ * Scrapes the CringeMDB page for content warnings.
+ * @param {string} htmlContent - The HTML content.
+ * @param {string} url - The scraped URL.
+ * @returns {object|null} Object with { source, type, value, url } or null.
+ */
+function scrapeCringeMDBPage(htmlContent, url) {
     try {
-        logger.debug(`${PROVIDER_NAME}: Scraping page ${url}`);
-        const response = await axios.get(url, {
-            headers: { 'User-Agent': config.userAgent },
-            timeout: 10000
-        });
-
-        const $ = cheerio.load(response.data);
+        const $ = cheerio.load(htmlContent);
         const warnings = [];
 
-        // Check verification status
-        const isVerifiedSafe = $('.certification .emoji .safe').length > 0;
-        const certification = isVerifiedSafe ? '✅ Parent-Safe' : '⚠️ Not Parent Safe';
-        warnings.push(certification); // Add certification first
+        // --- Certification Status ---
+        // Selectors based on current CringeMDB structure (may change)
+        const certificationSelector = '.certification .emoji'; // General area
+        const safeEmojiSelector = '.safe'; // Emoji for safe
+        const isVerifiedSafe = $(`${certificationSelector} ${safeEmojiSelector}`).length > 0;
+        const certificationText = isVerifiedSafe ? '✅ Parent-Safe' : '⚠️ Not Parent Safe';
+        // Always add certification status
+        warnings.push({ category: 'Certification', text: certificationText });
+        logger.debug(`[${PROVIDER_NAME}] Found Certification: ${certificationText}`);
 
-        // Get content warnings (sex, nudity, violence)
-        $('.content-warnings .content-flag').each((_, element) => {
-            const category = $(element).find('h3').text().trim();
-            const value = $(element).find('h4').text().trim(); // Should be 'Yes' or 'No'
+        // --- Specific Content Warnings ---
+        const warningSelector = '.content-warnings .content-flag';
+        const categorySelector = 'h3';
+        const valueSelector = 'h4'; // Contains 'Yes' or 'No'
 
-            // Map categories to emojis - adjust as needed
-            const warningMap = {
-                'Sex Scene': '🔞',
-                'Nudity': '👁️‍🗨️', // Using a slightly different eye emoji
-                'Sexual Violence': '💔',
-                'Graphic Violence': '🩸',
-                'Drug Use': '💊',
-                'Excessive Swearing': '🤬',
-            };
+        const warningMap = { // Emojis for categories
+            'Sex Scene': '🔞',
+            'Nudity': '👁️‍🗨️',
+            'Sexual Violence': '💔',
+            'Graphic Violence': '🩸',
+            'Drug Use': '💊',
+            'Excessive Swearing': '🤬',
+            // Add more mappings as needed
+        };
 
-            // Add warning if the value is 'Yes'
+        $(warningSelector).each((_, element) => {
+            const category = $(element).find(categorySelector).text().trim();
+            const value = $(element).find(valueSelector).text().trim();
+
             if (value.toUpperCase() === 'YES') {
-                const emoji = warningMap[category] || '🚩'; // Default flag emoji
-                warnings.push(`${emoji} ${category}`);
-                logger.debug(`${PROVIDER_NAME}: Found warning: ${category}`);
+                const emoji = warningMap[category] || '🚩'; // Default flag
+                const warningText = `${emoji} ${category}`;
+                warnings.push({ category: category, text: warningText });
+                logger.debug(`[${PROVIDER_NAME}] Found Warning: ${category}`);
             }
         });
 
-        // Only return if we have more than just the certification status
-        if (warnings.length > 1) {
+        // Format the result
+        if (warnings.length > 0) {
+            // Separate Certification from Warnings for clarity if desired
+            const cert = warnings.find(w => w.category === 'Certification')?.text || '';
+            const contentWarns = warnings.filter(w => w.category !== 'Certification').map(w => w.text);
+
+            let combinedValue = cert;
+            if (contentWarns.length > 0) {
+                combinedValue += (cert ? '\n' : '') + contentWarns.join('\n');
+            }
+
             return {
                 source: PROVIDER_NAME,
                 type: 'Content Warnings',
-                value: warnings.join('\n'), // Join warnings with newlines
+                value: combinedValue.trim(), // Combine certification and warnings
                 url: url,
             };
-        } else if (warnings.length === 1) {
-            // If only certification is found, maybe don't report it unless explicitly desired
-            logger.debug(`${PROVIDER_NAME}: Only certification status found, no specific warnings.`);
-            return {
-                source: PROVIDER_NAME,
-                type: 'Certification',
-                value: certification,
-                url: url,
-            }; // Optionally return just certification
-            // return null;
         }
 
-        logger.debug(`${PROVIDER_NAME}: No significant warnings found on page ${url}`);
+        logger.debug(`[${PROVIDER_NAME}] No significant warnings or certification found on page ${url}`);
         return null;
 
     } catch (error) {
-        if (error.response?.status === 404) {
-            logger.warn(`${PROVIDER_NAME}: Page not found (404) at ${url}`);
-        } else if (error.response) {
-            logger.error(`${PROVIDER_NAME}: HTTP Error scraping page ${url}: ${error.response.status}`);
-        } else {
-            logger.error(`${PROVIDER_NAME}: Network or parsing error scraping page ${url}: ${error.message}`);
-        }
+        logger.error(`[${PROVIDER_NAME}] Cheerio parsing error for ${url}: ${error.message}`);
         return null;
     }
 }
 
-async function getRating(type, imdbId,streamInfo) {
+/**
+ * Fetches content warnings from CringeMDB.
+ * @param {'movie'|'series'} type - Content type (only 'movie' supported).
+ * @param {string} imdbId - IMDb ID (for logging).
+ * @param {object} streamInfo - Object containing { name: string, year: string }.
+ * @returns {Promise<object|null>} A rating/warning object or null.
+ */
+async function getRating(type, imdbId, streamInfo) {
     // CringeMDB primarily focuses on movies
     if (type !== 'movie') {
-        logger.debug(`${PROVIDER_NAME}: Skipping check, only supports movies.`);
+        logger.debug(`[${PROVIDER_NAME}] Skipping ${imdbId}: Only supports movies.`);
+        return null;
+    }
+    if (!streamInfo?.name || !streamInfo?.year) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Missing title or year.`);
+        return null;
+    }
+    if (!BASE_URL) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Base URL not configured.`);
         return null;
     }
 
-    logger.debug(`${PROVIDER_NAME}: Fetching content warnings for ${imdbId}`);
-
-    try {
-        if (!streamInfo?.name || !streamInfo?.year) {
-            logger.warn(`${PROVIDER_NAME}: Cannot proceed without title and release year for ${imdbId}.`);
-            return null;
-        }
-
-        const targetUrl = getCringeMDBUrl(streamInfo.name, streamInfo.year);
-        if (!targetUrl) {
-            logger.warn(`${PROVIDER_NAME}: Could not construct valid URL for ${streamInfo.name} (${streamInfo.year}).`);
-            return null;
-        }
-
-        const rating = await scrapeCringeMDBPage(targetUrl);
-
-        if (!rating) {
-            logger.debug(`${PROVIDER_NAME}: No content warnings found for ${streamInfo.name} at ${targetUrl}`);
-            return null;
-        }
-
-        return rating;
-    } catch (error) {
-        logger.error(`${PROVIDER_NAME}: Unexpected error getting content warnings for ${imdbId}: ${error.message}`);
+    const targetUrl = getCringeMDBUrl(streamInfo.name, streamInfo.year);
+    if (!targetUrl) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Could not construct URL for "${streamInfo.name}" (${streamInfo.year}).`);
         return null;
     }
+
+    logger.debug(`[${PROVIDER_NAME}] Attempting fetch for ${imdbId} from ${targetUrl}`);
+
+    const response = await getPage(targetUrl, PROVIDER_NAME);
+
+    if (!response || response.status !== 200) {
+        return null;
+    }
+
+    const warnings = scrapeCringeMDBPage(response.data, targetUrl);
+
+    if (!warnings) {
+        logger.debug(`[${PROVIDER_NAME}] No warnings found via scraping for ${imdbId} at ${targetUrl}`);
+    }
+
+    return warnings;
 }
 
 module.exports = {
