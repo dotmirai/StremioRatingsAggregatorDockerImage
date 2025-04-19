@@ -5,6 +5,10 @@ const { getTmdbData } = require('../utils/tmdbService');
 const providers = require('../providers');
 
 const CACHE_PREFIX = 'ratings:';
+// Define a specific value to represent "no ratings found" in cache
+const NO_RATINGS_MARKER = '___NO_RATINGS___';
+// Define a shorter TTL for negative cache entries (e.g., 6 hours)
+const NEGATIVE_CACHE_TTL_SECONDS = 6 * 60 * 60;
 
 // Providers that return { source, value } or array thereof
 const activeProviders = [
@@ -23,8 +27,8 @@ const activeProviders = [
  * @returns {number} TTL in seconds
  */
 function calculateTTL(releaseDate, numRatings) {
+    // --- No changes needed in this function ---
     if (!releaseDate) {
-        // Fallback: use default TTL
         return config.cache.ttlSeconds;
     }
 
@@ -51,7 +55,6 @@ function calculateTTL(releaseDate, numRatings) {
         ttl = 4 * 365 * 24 * 60 * 60; // 4 years
     }
 
-    // If few ratings found, reduce TTL assuming scrape failure
     if (numRatings <= 3) {
         ttl = Math.min(ttl, 3 * 24 * 60 * 60); // cap at 3 days
     }
@@ -61,6 +64,7 @@ function calculateTTL(releaseDate, numRatings) {
 
 /** Normalize a single provider rating object */
 function processSingleRating(rating) {
+    // --- No changes needed in this function ---
     if (!rating || !rating.source || !rating.value) {
         return null;
     }
@@ -70,9 +74,10 @@ function processSingleRating(rating) {
     };
 }
 
+
 /**
  * Aggregates ratings for a given IMDb ID and type.
- * Uses Redis cache, falls back to providers, then updates cache with dynamic TTL.
+ * Includes negative caching.
  *
  * @param {'movie'|'series'} type
  * @param {string} imdbId  IMDb ID, may include :S:E suffix
@@ -85,63 +90,91 @@ async function getRatings(type, imdbId) {
     // 1) Try cache
     if (redisClient.isReady()) {
         try {
-            const cached = await redisClient.get(cacheKey);
-            if (cached) {
-                logger.info(`Cache HIT for ${baseId}`);
-                return cached;
+            const cachedValue = await redisClient.getRatingsHashOrMarker(cacheKey); // Use a new function
+
+            if (cachedValue === NO_RATINGS_MARKER) {
+                logger.info(`Cache HIT for ${baseId} (Negative Cache)`);
+                return null; // Explicitly return null for negatively cached entries
+            } else if (cachedValue) {
+                logger.info(`Cache HIT for ${baseId} (Hash)`);
+                // It's an array of ratings
+                return cachedValue;
             }
             logger.info(`Cache MISS for ${baseId}`);
         } catch (err) {
-            logger.error(`Redis GET error for ${cacheKey}: ${err.message}`);
+            logger.error(`Error checking cache for ${cacheKey}: ${err.message}`);
         }
     } else {
-        logger.warn(`Redis not ready; skipping cache for ${baseId}.`);
+        logger.warn(`Redis not ready; skipping cache check for ${baseId}.`);
     }
 
     logger.info(`Aggregating ratings for ${baseId} (${type}) from providers...`);
 
-    // 2) Fetch TMDB data (ID + metadata) once
+    // 2) Fetch TMDB data
     const { tmdbId, name, date } = await getTmdbData(imdbId, type);
-    if (!tmdbId) {
-        logger.warn(`No TMDB ID for ${baseId}; some providers may fail.`);
-    }
+    // --- TMDB lookup failure itself isn't negatively cached here, ---
+    // --- but could be added if getTmdbData was consistently failing for an ID ---
+    // --- The current logic proceeds even without tmdbId ---
 
     const year = date ? new Date(date).getFullYear().toString() : null;
     const streamInfo = { name, year };
 
-    // 3) Fetch from all providers in parallel
+    // 3) Fetch from all providers
     const promises = activeProviders.map(provider =>
         provider
             .getRating(type, imdbId, streamInfo, tmdbId)
             .catch(err => {
-                logger.error(`Error from ${provider.name}: ${err.message}`);
+                logger.error(`Error from ${provider.name} for ${imdbId}: ${err.message}`);
                 return null;
             })
     );
-
     const results = await Promise.all(promises);
 
-    // 4) Process and dedupe ratings, dropping any nulls
+    // 4) Process and dedupe ratings
     const allRatings = results
         .filter(ratingData => ratingData)
         .flatMap(data => (Array.isArray(data) ? data : [data]))
         .map(processSingleRating)
         .filter(r => r);
 
-    logger.info(`Found ${allRatings.length} ratings for ${baseId}.`);
+    const uniqueRatingsMap = new Map();
+    allRatings.forEach(r => uniqueRatingsMap.set(r.source, r.value));
+    const finalRatings = Array.from(uniqueRatingsMap, ([source, value]) => ({ source, value }));
 
-    // 5) Cache if we got any, using dynamic TTL based on release date and rating count
-    if (allRatings.length > 0 && redisClient.isReady()) {
-        const ttlSeconds = calculateTTL(date, allRatings.length);
-        try {
-            await redisClient.set(cacheKey, allRatings, ttlSeconds);
-            logger.debug(`Cached ${baseId} with TTL ${ttlSeconds}s`);
-        } catch (err) {
-            logger.error(`Redis SET error for ${cacheKey}: ${err.message}`);
+    logger.info(`Found ${finalRatings.length} unique ratings for ${baseId}.`);
+
+    // 5) Cache results OR negative marker
+    if (redisClient.isReady()) {
+        if (finalRatings.length > 0) {
+            // Cache the actual ratings with dynamic TTL
+            const ttlSeconds = calculateTTL(date, finalRatings.length);
+            try {
+                const success = await redisClient.setRatingsHash(cacheKey, finalRatings, ttlSeconds); // Use existing Hash set
+                if (success) {
+                    logger.debug(`Cached ratings hash for ${baseId} with TTL ${ttlSeconds}s`);
+                } else {
+                    logger.warn(`Failed to cache ratings hash for ${baseId}`);
+                }
+            } catch (err) {
+                logger.error(`Error caching hash for ${cacheKey}: ${err.message}`);
+            }
+        } else {
+            // Cache the negative result with a shorter, fixed TTL
+            logger.info(`No ratings found for ${baseId}, setting negative cache entry.`);
+            try {
+                const success = await redisClient.setNegativeMarker(cacheKey, NO_RATINGS_MARKER, NEGATIVE_CACHE_TTL_SECONDS); // Use a new function
+                if (success) {
+                    logger.debug(`Cached negative marker for ${baseId} with TTL ${NEGATIVE_CACHE_TTL_SECONDS}s`);
+                } else {
+                    logger.warn(`Failed to cache negative marker for ${baseId}`);
+                }
+            } catch (err) {
+                logger.error(`Error caching negative marker for ${cacheKey}: ${err.message}`);
+            }
         }
     }
 
-    return allRatings.length > 0 ? allRatings : null;
+    return finalRatings.length > 0 ? finalRatings : null;
 }
 
 module.exports = { getRatings };
