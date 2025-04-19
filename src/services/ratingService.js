@@ -42,8 +42,11 @@ function processSingleRating(rating) {
  * @returns {Promise<Array|null>} Array of rating objects or null if error/no data
  */
 async function getRatings(type, imdbId) {
-    const cacheKey = `${CACHE_PREFIX}${imdbId}`;
-    const baseImdbId = imdbId.split(':')[0]; // Use base ID for logging consistency
+    const rawImbdId = imdbId; // Keep the original ID for logging
+    imdbId = imdbId.split(':')[0]; // Use base ID for logging consistency
+    const cacheKey = `${CACHE_PREFIX}${type}:${imdbId}`; // Cache key format
+
+    console.log(cacheKey);
 
     // 1. Check Cache
     if (redisClient.isReady()) {
@@ -76,26 +79,26 @@ async function getRatings(type, imdbId) {
 
         // fetch tmdb id 
         if (!tmdbId) {
-            tmdbId = await getTmdbId(baseImdbId, type);
+            tmdbId = await getTmdbId(imdbId, type);
             if (!tmdbId) {
-                logger.warn(`Could not retrieve TMDB ID for ${baseImdbId}, some scrapers might fail.`);
+                logger.warn(`Could not retrieve TMDB ID for ${imdbId}, some scrapers might fail.`);
             }
         }
 
         if (needsStreamInfo) {
-            logger.debug(`Workspaceing stream metadata for ${baseImdbId} as scrapers need it.`);
-            streamInfo = await getStreamNameAndYear(baseImdbId, type , tmdbId);
+            logger.debug(`Workspaceing stream metadata for ${imdbId} as scrapers need it.`);
+            streamInfo = await getStreamNameAndYear(imdbId, type, tmdbId);
             if (!streamInfo) {
-                logger.warn(`Could not retrieve stream metadata for ${baseImdbId}, some scrapers might fail.`);
+                logger.warn(`Could not retrieve stream metadata for ${imdbId}, some scrapers might fail.`);
             }
         } else {
-            logger.debug(`Skipping stream metadata fetch for ${baseImdbId} as no active scraper requires it.`);
+            logger.debug(`Skipping stream metadata fetch for ${imdbId} as no active scraper requires it.`);
         }
 
 
         // Fetch from all active providers in parallel, collecting all results (success or failure)
         const providerPromises = activeProviders.map(provider =>
-            provider.getRating(type, imdbId, streamInfo,tmdbId) // Pass streamInfo if fetched
+            provider.getRating(type, rawImbdId, streamInfo, tmdbId) // Pass streamInfo if fetched
                 .then(result => ({ status: 'fulfilled', value: result, provider: provider.name }))
                 .catch(error => ({ status: 'rejected', reason: error, provider: provider.name }))
         );
