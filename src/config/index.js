@@ -24,6 +24,7 @@ const config = {
         imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
         metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
         commonSenseBaseUrl: process.env.COMMONSENSE_BASE_URL || 'https://www.commonsensemedia.org',
+        rottentomatoesBaseUrl: process.env.ROTTENTOMATOES_BASE_URL || 'https://www.rottentomatoes.com',
         cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
     },
     userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36', // Update UA periodically

@@ -17,6 +17,7 @@ const activeProviders = [
     providers.metacriticProvider,
     providers.commonSenseProvider,
     providers.cringeMdbProvider,
+    providers.rottentomatoesProvider,
     // extend here...
 ];
 

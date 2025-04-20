@@ -9,7 +9,8 @@ function getEmojiForSource(source) {
         'IMDb': '⭐',
         'MC': 'Ⓜ️', // Metacritic Critic Score
         'MC Users': '👤', // Metacritic User Score
-        'Rotten Tomatoes': '🍅', // Placeholder
+        'RT': '🍅', // Placeholder
+        'RT Users': '👥', // Placeholder
         'Letterboxd': '📝', // Placeholder
         'Common Sense': '👶',
         'CringeMDB': '⚠️', // Warning sign for CringeMDB
@@ -59,9 +60,9 @@ async function streamHandler({ type, id }) {
 
         // Add standard ratings (IMDb, TMDb, Metacritic)
         ratings
-            .filter(r => ['IMDb', 'TMDb', 'MC', 'MC Users'].includes(r.source))
+            .filter(r => ['IMDb', 'TMDb', 'MC', 'MC Users','RT' ,'RT Users'].includes(r.source))
             .sort((a, b) => { // Sort for consistent order
-                const order = ['IMDb', 'TMDb', 'MC', 'MC Users'];
+                const order = ['IMDb', 'TMDb', 'MC', 'MC Users', 'RT', 'RT Users'];
                 return order.indexOf(a.source) - order.indexOf(b.source);
             })
             .forEach(rating => {
