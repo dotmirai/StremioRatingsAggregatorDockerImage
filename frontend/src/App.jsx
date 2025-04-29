@@ -7,14 +7,16 @@ import RatingCard from './components/RatingCard';
 import { addonConfig } from './config';
 import showCase from './assets/showcase.png';
 import { AddonManagerCard } from './components/AddonManagerCard';
+import { useEffect } from 'react';
 
 // Removed KoFiDialog import as it was commented out
 // import { KoFiDialog } from 'react-kofi';
 // import 'react-kofi/dist/styles.css';
 
 // +++ ADD THESE IMPORTS +++
-import { Analytics } from "@vercel/analytics/react"
-import { SpeedInsights } from "@vercel/speed-insights/react"
+import { initGTM } from './utils/gtm';
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 // ++++++++++++++++++++++++++
 
 function App() {
@@ -22,6 +24,13 @@ function App() {
   // Assuming the frontend and backend are served from the same Vercel deployment domain
   const manifestUrl = `/manifest.json`;
   // Or adjust addonConfig.backendUrl if needed: const manifestUrl = `${addonConfig.backendUrl}/manifest.json`;
+
+  useEffect(() => {
+    // Initialize Google Tag Manager
+    initGTM();
+    // push initial pageview event
+    window.dataLayer.push({ event: 'pageview', page: window.location.pathname });
+  }, []);
 
   const handleCopy = () => {
     // Construct full URL for copying if needed, using window.location.origin
