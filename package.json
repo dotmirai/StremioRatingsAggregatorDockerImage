@@ -15,9 +15,11 @@
     "build:frontend": "cd frontend && npm run build",
     "docker:build": "docker build -t ratings-aggregator .",
     "docker:run": "if [ -f .env ]; then docker run -p 61262:61262 --env-file .env ratings-aggregator; else echo 'ERROR: .env file not found! Create one from .env.example' && exit 1; fi",
+    "docker:build-run": "if [ -f .env ]; then docker build --build-arg VITE_HOME_BLURB=\"$(grep '^VITE_HOME_BLURB=' .env | cut -d= -f2-)\" -t ratings-aggregator . && docker run -p 61262:61262 --env-file .env ratings-aggregator; else echo 'ERROR: .env file not found! Create one from .env.example' && exit 1; fi",
     "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+
   "dependencies": {
     "axios": "^1.8.4",
     "cheerio": "^1.0.0",

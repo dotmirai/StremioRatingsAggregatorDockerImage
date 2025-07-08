@@ -3,6 +3,9 @@ version: '3.8'
 services:
   ratings-aggregator:
     build: .
+    context: .
+    args:
+      - VITE_HOME_BLURB=${VITE_HOME_BLURB}
     image: ratings-aggregator
     container_name: ratings-aggregator
     ports:
