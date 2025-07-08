@@ -1,0 +1,15 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - master  # or 'main' if that's your default branch
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
+          package-name: rating-aggregator
