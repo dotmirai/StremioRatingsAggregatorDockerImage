@@ -1,157 +1,110 @@
-// frontend/src/App.jsx
 import { motion } from 'framer-motion';
 import { FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { SiStremio } from "react-icons/si";
+import { useEffect } from 'react';
 import RatingCard from './components/RatingCard';
 import { addonConfig } from './config';
 import showCase from './assets/showcase.png';
 import { AddonManagerCard } from './components/AddonManagerCard';
-import { useEffect } from 'react';
-
-// Removed KoFiDialog import as it was commented out
-// import { KoFiDialog } from 'react-kofi';
-// import 'react-kofi/dist/styles.css';
-
-// +++ ADD THESE IMPORTS +++
 import { initGTM } from './utils/gtm';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-// ++++++++++++++++++++++++++
 
 function App() {
-  // Use a relative path for Vercel deployment, or configure backendUrl dynamically
-  // Assuming the frontend and backend are served from the same Vercel deployment domain
   const manifestUrl = `/manifest.json`;
-  // Or adjust addonConfig.backendUrl if needed: const manifestUrl = `${addonConfig.backendUrl}/manifest.json`;
+  const sponsorHTML = import.meta.env.VITE_HOME_BLURB;
 
   useEffect(() => {
-    // Initialize Google Tag Manager
     initGTM();
-    // push initial pageview event
     window.dataLayer.push({ event: 'pageview', page: window.location.pathname });
   }, []);
 
   const handleCopy = () => {
-    // Construct full URL for copying if needed, using window.location.origin
-    const absoluteManifestUrl = new URL(manifestUrl, window.location.origin).href;
-    navigator.clipboard.writeText(absoluteManifestUrl)
+    const absoluteUrl = new URL(manifestUrl, window.location.origin).href;
+    navigator.clipboard.writeText(absoluteUrl)
       .then(() => toast.success('Manifest URL copied!'))
       .catch(() => toast.error('Failed to copy URL'));
   };
 
   const handleStremioWeb = () => {
-    const absoluteManifestUrl = new URL(manifestUrl, window.location.origin).href;
-    window.open(`https://web.stremio.com/#/addons?addon=${encodeURIComponent(absoluteManifestUrl)}`, '_blank');
+    const url = new URL(manifestUrl, window.location.origin).href;
+    window.open(`https://web.stremio.com/#/addons?addon=${encodeURIComponent(url)}`, '_blank');
   };
 
   const handleStremioApp = () => {
     const absoluteManifestUrl = new URL(manifestUrl, window.location.origin).href;
-    // Ensure the manifest URL uses https for the deeplink if deployed
-    const deepLinkManifestUrl = absoluteManifestUrl.replace(/^http:\/\//i, 'https://://');
-    const deepLink = deepLinkManifestUrl.replace(/^https?:\/\//i, 'stremio://');
+    const deepLink = absoluteManifestUrl.replace(/^https?:\/\//i, 'stremio://');
     window.location.href = deepLink;
   };
+  
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      {/* +++ ADD VERCEL COMPONENTS HERE +++ */}
+    <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 bg-[#0f172a] text-white">
       <Analytics />
       <SpeedInsights />
-      {/* +++++++++++++++++++++++++++++++++ */}
+
       <motion.div
+        className="max-w-7xl mx-auto"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="max-w-7xl mx-auto"
       >
-        {/* ... (rest of your component remains the same) ... */}
-
-        <div className="mb-16 space-y-12">
+        <header className="text-center mb-12 space-y-4">
           <motion.h1
-            className="text-xl sm:text-6xl font-bold mb-6 gradient-text"
-            initial={{ scale: 0.5 }}
+            className="text-4xl sm:text-6xl font-extrabold gradient-text"
+            initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5 }}
           >
             Ratings Aggregator
-            <div className="text-2xl sm:text-4xl font-normal text-gray-400">
-              : )
-            </div>
           </motion.h1>
-          <motion.p
-            className="text-xl text-gray-300 max-w-2xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
+          <p className="text-xl sm:text-2xl text-gray-300">
             Your all-in-one movie and TV show ratings aggregator for Stremio
-          </motion.p>
-        </div>
+          </p>
+
+          {sponsorHTML && (
+            <motion.div
+              className="mx-auto mt-6 bg-[#0f1a2f] text-sm sm:text-base text-gray-200 px-6 py-4 rounded-xl shadow max-w-2xl text-center backdrop-blur sponsor-box border border-white/5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              dangerouslySetInnerHTML={{ __html: sponsorHTML }}
+            />
+          )}
+        </header>
 
         <motion.div
           className="flex flex-col sm:flex-row justify-center gap-4 mb-16"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.4 }}
         >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="button-gradient px-8 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold"
-            onClick={handleCopy}
-          >
+          <button onClick={handleCopy} className="button-gradient px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
             <FaCopy /> Copy URL
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="button-gradient px-8 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold"
-            onClick={handleStremioWeb}
-          >
+          </button>
+          <button onClick={handleStremioWeb} className="button-gradient px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
             <FaExternalLinkAlt /> Stremio Web
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="button-gradient px-8 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold"
-            onClick={handleStremioApp}
-          >
+          </button>
+          <button onClick={handleStremioApp} className="button-gradient px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
             <SiStremio /> Open Stremio
-          </motion.button>
-
-          {/* <KoFiDialog ... /> */}
+          </button>
         </motion.div>
 
         <motion.div
-          className="mb-16"
+          className="mb-16 flex justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.5 }}
         >
-          <div className="flex items-center justify-center w-full">
-            <img
-              src={showCase}
-              alt="Showcase"
-              className="w-full max-w-sm h-auto rounded-lg shadow-lg"
-            />
-          </div>
+          <img
+            src={showCase}
+            alt="Showcase"
+            className="w-full max-w-sm h-auto rounded-lg shadow-lg"
+          />
         </motion.div>
 
-        <motion.div
-          className="text-center mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          {/* <h2 className="text-3xl font-bold mb-4">Why Ratings Aggregator ?</h2> */}
-          {/* <p>...</p> */}
-        </motion.div>
-
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           <RatingCard
             title="Multi-Source Ratings"
             description="Aggregate scores from IMDb, TMDb, Metacritic & more"
@@ -167,25 +120,18 @@ function App() {
             description="Detailed content analysis from CringeMDB"
             icon="🔍"
           />
-        </div>
-
-        {/* i need space in between  */}
-        <div className="mt-8"></div>
+        </section>
 
         <AddonManagerCard />
 
-        <div className='mt-8'></div>
-        
-        <motion.div
-          className="text-center"
+        <motion.footer
+          className="text-center mt-12 text-gray-400 text-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.9 }}
+          transition={{ delay: 0.6 }}
         >
-          <p className="text-gray-400">
-            Version {addonConfig.version} • Made with ❤️ for Stremio
-          </p>
-        </motion.div>
+          Version {addonConfig.version} • Made with ❤️ for Stremio
+        </motion.footer>
       </motion.div>
     </div>
   );
