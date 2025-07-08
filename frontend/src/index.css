@@ -69,3 +69,11 @@ body {
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+
+.sponsor-box a {
+  @apply text-blue-400 underline hover:text-blue-300 transition-colors duration-150;
+}
+
+.sponsor-box strong {
+  @apply text-white font-semibold;
+}
