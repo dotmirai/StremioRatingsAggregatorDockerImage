@@ -3,13 +3,19 @@ name: Release Please
 on:
   push:
     branches:
-      - master  # or 'main' if that's your default branch
+      - master
 
 jobs:
   release:
+    name: Release
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
       - uses: googleapis/release-please-action@v4
         with:
           release-type: node
-          package-name: rating-aggregator
+          repo-url: anmol210202/rating-aggregator-
