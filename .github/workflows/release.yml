@@ -13,9 +13,15 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write # Required for creating labels
 
     steps:
-      - uses: googleapis/release-please-action@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v4
         with:
           release-type: node
           repo-url: anmol210202/rating-aggregator-
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
