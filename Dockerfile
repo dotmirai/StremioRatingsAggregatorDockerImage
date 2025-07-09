@@ -9,11 +9,6 @@
     
     COPY frontend ./frontend
     
-    # Inject VITE_HOME_BLURB into Vite
-    RUN printf "VITE_HOME_BLURB=%s\n" "${VITE_HOME_BLURB}" > frontend/.env.production \
-    && echo "--- frontend/.env.production contents ---" \
-    && cat frontend/.env.production
-    
     RUN cd frontend && npm run build
     
     # --- backend builder ---

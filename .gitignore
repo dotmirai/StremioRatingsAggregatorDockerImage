@@ -1,5 +1,72 @@
-node_modules
-.env
+# === Node ===
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
+dist/
+build/
+
+# === Environment Variables ===
+.env
+.env.*.local
+.env.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# === Logs ===
+logs/
+*.log
+*.out
+*.pid
+*.seed
+*.gz
+
+# === OS/System ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# === IDEs/Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# === Coverage/Test ===
+coverage/
+.nyc_output/
+*.lcov
+
+# === React/Vite ===
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.next/
+frontend/.cache/
+frontend/.parcel-cache/
+
+# === Backend ===
+backend/node_modules/
+backend/dist/
+
+# === Docker ===
+*.local
+docker-compose.override.yml
+
+# === Git ===
+.git/
+.gitignore
+
+# === Misc ===
+*.tgz
+*.tar.gz
+*.zip
+*.bak
+*.orig
+*.patch
+*.sublime-workspace

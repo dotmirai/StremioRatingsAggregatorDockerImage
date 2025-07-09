@@ -1,0 +1,36 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "ratings-aggregator"
+    },
+    "frontend": {
+      "release-type": "node",
+      "package-name": "ratings-pro-frontend"
+    }
+  },
+  "plugins": [
+    {
+      "type": "node-workspace",
+      "config": {}
+    },
+    {
+      "type": "extra-files",
+      "config": {
+        "extra-files": [
+          {
+            "path": "src/config/index.js",
+            "type": "json",
+            "jsonpath": "$.addon.version"
+          },
+          {
+            "path": "frontend/src/config.js",
+            "type": "js",
+            "regex": "version:\\s*['\"](.*?)['\"]",
+            "replacement": "version: '${version}'"
+          }
+        ]
+      }
+    }
+  ]
+}

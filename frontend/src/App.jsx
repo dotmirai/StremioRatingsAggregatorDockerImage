@@ -11,9 +11,26 @@ import { initGTM } from './utils/gtm';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
+const SponsorBanner = ({ html }) => {
+  return (
+    <motion.div
+      className="relative mx-auto mt-6 bg-[#0f1a2f] text-sm sm:text-base text-gray-200 px-6 py-4 rounded-xl shadow max-w-2xl backdrop-blur border border-white/5"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.3 }}
+    >
+      <div
+        className="sponsor-content flex items-start gap-4 text-left"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </motion.div>
+  );
+};
+
+
 function App() {
   const manifestUrl = `/manifest.json`;
-  const sponsorHTML = import.meta.env.VITE_HOME_BLURB;
+  const sponsorHTML = process.env.VITE_HOME_BLURB;
 
   useEffect(() => {
     initGTM();
@@ -62,16 +79,9 @@ function App() {
           <p className="text-xl sm:text-2xl text-gray-300">
             Your all-in-one movie and TV show ratings aggregator for Stremio
           </p>
+          
+          {sponsorHTML && <SponsorBanner html={sponsorHTML} />}
 
-          {sponsorHTML && (
-            <motion.div
-              className="mx-auto mt-6 bg-[#0f1a2f] text-sm sm:text-base text-gray-200 px-6 py-4 rounded-xl shadow max-w-2xl text-center backdrop-blur sponsor-box border border-white/5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              dangerouslySetInnerHTML={{ __html: sponsorHTML }}
-            />
-          )}
         </header>
 
         <motion.div

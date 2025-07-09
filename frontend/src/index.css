@@ -70,10 +70,18 @@ body {
   100% { transform: scale(1); }
 }
 
-.sponsor-box a {
+.sponsor-content img {
+  @apply float-left w-20 h-20 sm:w-28 sm:h-28 mr-4 mb-2 rounded;
+}
+
+.sponsor-content p, .sponsor-content a {
+  @apply text-gray-200;
+}
+
+.sponsor-content a {
   @apply text-blue-400 underline hover:text-blue-300 transition-colors duration-150;
 }
 
-.sponsor-box strong {
+.sponsor-content strong {
   @apply text-white font-semibold;
 }

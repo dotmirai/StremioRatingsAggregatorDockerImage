@@ -6,7 +6,16 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
   // Load env variables
-  const env = loadEnv(mode, path.resolve(__dirname, '..'));
+  const env = loadEnv(mode, process.cwd(), "");
+  const processEnvValues = {
+    "process.env": Object.entries(env).reduce((prev, [key, val]) => {
+      console.log(key, val);
+      return {
+        ...prev,
+        [key]: val,
+      };
+    }, {}),
+  };
 
   return {
     plugins: [react()],
@@ -24,29 +33,6 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
-    // // Add this new section
-    define: {
-      'import.meta.env.VITE_HOME_BLURB': JSON.stringify(env.VITE_HOME_BLURB || ''),
-      'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.BACKEND_URL || '')
-    }
+    define: processEnvValues,
   }
 });
-
-
-// export default defineConfig({
-//   plugins: [react()],
-//   base: '/configure/',
-//   build: {
-//     outDir: path.resolve(__dirname, 'dist'),
-//     assetsDir: 'assets',
-//     emptyOutDir: true,
-//     rollupOptions: {
-//       input: {
-//         main: path.resolve(__dirname, 'index.html')
-//       },
-//       output: {
-//         assetFileNames: 'assets/[name]-[hash][extname]'
-//       }
-//     }
-//   }
-// })
