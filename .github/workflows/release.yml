@@ -5,21 +5,23 @@ on:
     branches:
       - master
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
 jobs:
   release:
+    name: Release
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write # Required for creating labels
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Release Please (Manifest Mode)
+      - name: Run Release Please
         uses: googleapis/release-please-action@v4
         with:
-          config-file: .release-please-manifest.json
+          release-type: node
+          repo-url: anmol210202/rating-aggregator-
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
