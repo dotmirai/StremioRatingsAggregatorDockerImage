@@ -10,17 +10,5 @@
       "release-type": "node",
       "package-name": "ratings-pro-frontend"
     }
-  },
-  "plugins": [
-    {
-      "type": "node-workspace",
-      "config": {}
-    },
-    {
-      "type": "extra-files",
-      "config": {
-        "extra-files": []
-      }
-    }
-  ]
+  }
 }
