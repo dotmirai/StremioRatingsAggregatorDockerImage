@@ -10,5 +10,6 @@
       "release-type": "node",
       "package-name": "ratings-pro-frontend"
     }
-  }
+  },
+  ".": "1.6.1"
 }
