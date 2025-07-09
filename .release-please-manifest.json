@@ -20,12 +20,13 @@
         "extra-files": [
           {
             "path": "src/config/index.js",
-            "type": "json",
-            "jsonpath": "$.addon.version"
+            "type": "text",
+            "regex": "version:\\s*['\"](.*?)['\"]",
+            "replacement": "version: '${version}'"
           },
           {
             "path": "frontend/src/config.js",
-            "type": "js",
+            "type": "text",
             "regex": "version:\\s*['\"](.*?)['\"]",
             "replacement": "version: '${version}'"
           }
