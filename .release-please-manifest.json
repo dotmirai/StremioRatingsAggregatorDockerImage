@@ -21,13 +21,6 @@
       "config": {
         "extra-files": [
           {
-            "path": "src/config/index.js",
-            "type": "text",
-            "parse-as": "string",
-            "regex": "version:\\s*['\\\"]([^'\\\"]*)['\\\"]",
-            "replacement": "version: '${version}'"
-          },
-          {
             "path": "frontend/src/config.js",
             "type": "text",
             "parse-as": "string",
