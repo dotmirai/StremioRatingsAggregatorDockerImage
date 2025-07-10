@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/anmol210202/rating-aggregator-/compare/v1.7.1...v1.7.2) (2025-07-10)
+
+
+### Bug Fixes
+
+* manually adding verison frontend ([eb45819](https://github.com/anmol210202/rating-aggregator-/commit/eb45819613b95ca0fe065c610ff2e56bbee32ca3))
+
 ## [1.7.1](https://github.com/anmol210202/rating-aggregator-/compare/v1.7.0...v1.7.1) (2025-07-10)
 
 
