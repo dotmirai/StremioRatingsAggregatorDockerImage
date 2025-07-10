@@ -1,7 +1,9 @@
 {
-  "include-component-in-tag": false,
-  "separate-pull-requests": false,
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "node",
+  "separate-pull-requests": false,
+  "include-component-in-tag": false,
+  "plugins": ["linked-versions"], 
   "packages": {
     ".": {
       "path": ".",
@@ -13,9 +15,5 @@
       "release-type": "node",
       "package-name": "ratings-pro-frontend"
     }
-  },
-  "plugins": ["linked-versions"],
-  "packages/plugins": {
-    ".": { "type": "node-workspace", "updateAllPackages": true }
   }
 }
