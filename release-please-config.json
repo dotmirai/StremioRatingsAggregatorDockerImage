@@ -15,10 +15,15 @@
       "package-name": "ratings-pro-frontend"
     }
   },
-  "plugins": ["linked-versions"],
-  "plugin-config": {
-    "linked-versions": {
+  "plugins": [
+    {
+      "type": "node-workspace",
+      "merge": false
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "mono-repo",
       "updateAllPackages": true
     }
-  }
+  ]
 }
