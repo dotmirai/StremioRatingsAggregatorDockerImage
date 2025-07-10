@@ -25,3 +25,5 @@ jobs:
           release-type: node
           repo-url: anmol210202/rating-aggregator-
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
