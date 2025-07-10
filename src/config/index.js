@@ -37,6 +37,7 @@ const config = {
             ? `🎯 Ratings Aggregator | ${process.env.ADDON_SUFFIX}`
             : '🎯 Ratings Aggregator',
         description: 'Aggregated ratings from IMDb, TMDb, Metacritic, Common Sense, CringeMDB and more.',
+        logo:'https://emojicdn.elk.sh/%F0%9F%8E%AF?style=google',
         catalogs: [],
         resources: ['stream'],
         types: ['movie', 'series'],

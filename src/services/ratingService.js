@@ -57,7 +57,7 @@ function calculateTTL(releaseDate, numRatings) {
     }
 
     if (numRatings <= 3) {
-        ttl = Math.min(ttl, 3 * 24 * 60 * 60); // cap at 3 days
+        ttl = Math.min(ttl, 10 * 24 * 60 * 60); // cap at 3 days
     }
 
     return ttl;
