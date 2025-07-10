@@ -140,7 +140,8 @@ function App() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          Version {addonVersion} • Made with ❤️ for Stremio
+          {/* Version {addonVersion} •  */}
+          Made with ❤️ for Stremio
         </motion.footer>
       </motion.div>
     </div>
