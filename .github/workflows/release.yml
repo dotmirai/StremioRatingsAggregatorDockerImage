@@ -2,38 +2,29 @@ name: Release Please
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
 
 jobs:
-  # 1) Prepare the bump PR (sync extra-files, manifest, etc)
-  prepare:
+  release:
+    name: Release
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
       pull-requests: write
       issues: write
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # required for tagging + GitHub Release
+          release-type: node
+          repo-url:    anmol210202/rating-aggregator-
+          token:       ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # your existing config+manifest
           config-file:    release-please-config.json
           manifest-file:  .release-please-manifest.json
-
-  # 2) Publish (tag & GitHub Release) using the old inputs
-  publish:
-    needs: prepare
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: googleapis/release-please-action@v4
-        with:
-          # no config/manifest here → it will pick up your merged PR #22
-          release-type: node
-          repo-url:     anmol210202/rating-aggregator-
-          token:        ${{ secrets.RELEASE_PLEASE_TOKEN }}
