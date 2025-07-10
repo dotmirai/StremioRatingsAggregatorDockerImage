@@ -3,7 +3,6 @@
   "release-type": "node",
   "separate-pull-requests": false,
   "include-component-in-tag": false,
-  "plugins": ["linked-versions"], 
   "packages": {
     ".": {
       "path": ".",
@@ -14,6 +13,12 @@
       "path": "frontend",
       "release-type": "node",
       "package-name": "ratings-pro-frontend"
+    }
+  },
+  "plugins": ["linked-versions"],
+  "plugin-config": {
+    "linked-versions": {
+      "updateAllPackages": true
     }
   }
 }
