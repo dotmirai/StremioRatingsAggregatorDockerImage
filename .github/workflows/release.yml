@@ -21,6 +21,10 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          # required for tagging + GitHub Release
+          release-type: node
+          repo-url:    anmol210202/rating-aggregator-
+          token:       ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # your existing config+manifest
+          config-file:    release-please-config.json
+          manifest-file:  .release-please-manifest.json
