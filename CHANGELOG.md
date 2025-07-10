@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/anmol210202/rating-aggregator-/compare/v1.7.2...v1.8.0) (2025-07-10)
+
+
+### Features
+
+* **logo's:** added logo's ([57881c8](https://github.com/anmol210202/rating-aggregator-/commit/57881c8e97a116208568bb6358f443bb23c5dc3b))
+
 ## [1.7.2](https://github.com/anmol210202/rating-aggregator-/compare/v1.7.1...v1.7.2) (2025-07-10)
 
 
