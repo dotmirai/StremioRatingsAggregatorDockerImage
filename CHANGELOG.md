@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.2](https://github.com/anmol210202/rating-aggregator-/compare/v1.6.1...v1.6.2) (2025-07-10)
+
+
+### Bug Fixes
+
+* **release.yml:** fixing release.yml ([2067555](https://github.com/anmol210202/rating-aggregator-/commit/20675553a4934dce6666679b919b3ef929d0fe89))
+* testing monorepo release please setup ([ed0cc6d](https://github.com/anmol210202/rating-aggregator-/commit/ed0cc6d19d37327330c956b646f9da03d6a53527))
+
 ## [1.6.1](https://github.com/anmol210202/rating-aggregator-/compare/v1.6.0...v1.6.1) (2025-07-09)
 
 
