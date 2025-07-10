@@ -33,7 +33,9 @@ const config = {
     addon: {
         id: 'community.ratings.aggregator',
         version: pkg.version || '0.0.0',
-        name: '🎯 Ratings Aggregator',
+        name: process.env.ADDON_SUFFIX
+            ? `🎯 Ratings Aggregator | ${process.env.ADDON_SUFFIX}`
+            : '🎯 Ratings Aggregator',
         description: 'Aggregated ratings from IMDb, TMDb, Metacritic, Common Sense, CringeMDB and more.',
         catalogs: [],
         resources: ['stream'],
