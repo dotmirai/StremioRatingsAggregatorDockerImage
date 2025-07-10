@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/anmol210202/rating-aggregator-/compare/v1.7.0...v1.7.1) (2025-07-10)
+
+
+### Bug Fixes
+
+* back to single job fallback ([a3051a4](https://github.com/anmol210202/rating-aggregator-/commit/a3051a40c4dee9c72fe79c9f9ed06a4da68ca2af))
+
 ## [1.7.0](https://github.com/anmol210202/rating-aggregator-/compare/v1.6.2...v1.7.0) (2025-07-10)
 
 
