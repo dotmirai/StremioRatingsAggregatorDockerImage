@@ -4,7 +4,6 @@ import { toast } from 'react-toastify';
 import { SiStremio } from "react-icons/si";
 import { useEffect } from 'react';
 import RatingCard from './components/RatingCard';
-import { addonConfig } from './config';
 import showCase from './assets/showcase.png';
 import { AddonManagerCard } from './components/AddonManagerCard';
 import { initGTM } from './utils/gtm';
@@ -31,6 +30,7 @@ const SponsorBanner = ({ html }) => {
 function App() {
   const manifestUrl = `/manifest.json`;
   const sponsorHTML = process.env.VITE_HOME_BLURB;
+  const addonVersion = process.env.VERSION || '0.0.0';
 
   useEffect(() => {
     initGTM();
@@ -140,7 +140,7 @@ function App() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          Version {addonConfig.version} • Made with ❤️ for Stremio
+          Version {addonVersion} • Made with ❤️ for Stremio
         </motion.footer>
       </motion.div>
     </div>

@@ -2,14 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { loadEnv } from 'vite';
 import path from 'path'
-
+import { version } from './package.json';
 
 export default defineConfig(({ mode }) => {
   // Load env variables
   const env = {
     ...loadEnv(mode, process.cwd(), ""),
-    ...loadEnv('version', process.cwd(), ''),
-  };
+    };
     const processEnvValues = {
     "process.env": Object.entries(env).reduce((prev, [key, val]) => {
       console.log(key, val);
@@ -17,7 +16,9 @@ export default defineConfig(({ mode }) => {
         ...prev,
         [key]: val,
       };
-    }, {}),
+    }, {
+      VERSION: version,
+    }),
   };
 
   return {
