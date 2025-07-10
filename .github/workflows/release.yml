@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      issues: write # Required for creating labels
+      issues: write
 
     steps:
       - name: Checkout code
@@ -21,7 +21,31 @@ jobs:
 
       - name: Run Release Please
         uses: googleapis/release-please-action@v4
+        id: release # Add an ID to reference outputs
         with:
-          release-type: node
-          repo-url: anmol210202/rating-aggregator-
+          # Remove release-type here, it's now in the config file
+          # repo-url: anmol210202/rating-aggregator- # This is usually not needed as it defaults to current repo
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json # Point to your new config file
+          manifest-file: .release-please-manifest.json # Ensure this is referenced
+
+      - name: Publish if release was created
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          echo "A new release was created!"
+          echo "Tag: ${{ steps.release.outputs.tag_name }}"
+          echo "Release URL: ${{ steps.release.outputs.html_url }}"
+          echo "New Root Version: ${{ steps.release.outputs.root_tag_name }}"
+          echo "New Frontend Version: ${{ steps.release.outputs.frontend_tag_name }}"
+
+          # Example of conditional deployment based on a release being created
+          # You can add your build/deploy commands here.
+          # Since versions are unified, you'd likely just trigger a single deployment for the whole project.
+          # For instance:
+          # npm install # Install root dependencies
+          # npm run build # Your main build script for the entire project
+          # cd frontend
+          # npm install
+          # npm run build # Build frontend
+          # cd ..
+          # Your deployment scripts (e.g., Docker build/push, Vercel deploy, etc.)

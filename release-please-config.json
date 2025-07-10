@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "root",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": ["frontend/package.json"]
+    },
+    "frontend": {
+      "release-type": "node",
+      "package-name": "frontend",
+      "changelog-path": "frontend/CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "auto-major": false,
+      "auto-minor": false,
+      "auto-patch": false,
+      "release-as-is": true,
+      "copy-sections": ["Features", "Bug Fixes", "Performance", "Reverts"]
+    }
+  },
+  "bootstrap-sha": "b9f6160ea02dd114cbaa55c681060bb2b62943df"
+}

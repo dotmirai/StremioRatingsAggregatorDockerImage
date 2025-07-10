@@ -1,6 +1,8 @@
 // config/index.js
 require('dotenv').config();
 
+const pkg = require('../../package.json');
+
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
@@ -30,7 +32,7 @@ const config = {
     userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36', // Update UA periodically
     addon: {
         id: 'community.ratings.aggregator',
-        version: '1.5.1', 
+        version: pkg.version || '0.0.0',
         name: '🎯 Ratings Aggregator',
         description: 'Aggregated ratings from IMDb, TMDb, Metacritic, Common Sense, CringeMDB and more.',
         catalogs: [],
