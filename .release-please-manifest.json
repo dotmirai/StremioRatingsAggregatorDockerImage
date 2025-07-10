@@ -1,15 +1,4 @@
 {
-  "packages": {
-    "backend": {
-      "path": ".",
-      "release-type": "node",
-      "package-name": "ratings-aggregator"
-    },
-    "frontend": {
-      "path": "frontend",
-      "release-type": "node",
-      "package-name": "ratings-pro-frontend"
-    }
-  },
-  ".": "1.6.1"
+  ".": "1.6.1",
+  "ratings-pro-frontend": "1.0.0"
 }

@@ -6,8 +6,11 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
   // Load env variables
-  const env = loadEnv(mode, process.cwd(), "");
-  const processEnvValues = {
+  const env = {
+    ...loadEnv(mode, process.cwd(), ""),
+    ...loadEnv('version', process.cwd(), ''),
+  };
+    const processEnvValues = {
     "process.env": Object.entries(env).reduce((prev, [key, val]) => {
       console.log(key, val);
       return {
