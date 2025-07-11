@@ -18,7 +18,7 @@ We're building this for YOU! **What other rating sites (Rotten Tomatoes? Letterb
 
 # 🚀 Get Started in Seconds:
 
-1.  **Grab the Magic Link:** Head over to the [**Configure Page**](https://rating-aggregator-7h42.vercel.app/configure) and copy that Manifest URL. ✨
+1.  **Grab the Magic Link:** Head over to the [**Configure Page**](https://rating-aggregator.elfhosted.com/configure/) and copy that Manifest URL. ✨
 2.  **Beam it to Stremio:** Open Stremio, navigate to **Addons** → **Community Add-ons** (or might be just "Addons"), find the **Custom**/**Install from URL** option. ⚙️
 3.  **Paste & Activate:** Paste the URL you copied and hit **Install** (or Add/Okay). ✅
 4.  **🎉 BAM! 🎉** Unified ratings are now baked right into your Stremio experience! Enjoy the clarity!
@@ -62,7 +62,7 @@ Starring helps more people discover the addon, motivates development, and frankl
 
 # 🔗 Quick Links:
 
-* **Try the Beta / Get Manifest URL:** [Configure Page](https://rating-aggregator-7h42.vercel.app/configure)
+* **Try the Beta / Get Manifest URL:** [Configure Page](https://rating-aggregator.elfhosted.com/configure/)
 * **See the Code / Star Us ⭐:** [GitHub Repo](https://github.com/anmol210202/rating-aggregator-)
 * **Report Bugs / Suggest Features:** [Issues & Feedback](https://github.com/anmol210202/rating-aggregator-/issues)
 
