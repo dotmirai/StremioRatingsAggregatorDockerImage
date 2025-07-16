@@ -7,13 +7,6 @@ const { getPage } = require('../utils/httpClient');
 const PROVIDER_NAME = 'IMDb';
 const BASE_URL = config.sources.imdbBaseUrl;
 
-/**
- * Scrapes the IMDb page to extract the user rating.
- * @param {string} htmlContent - The HTML content of the page.
- * @param {string} url - The URL scraped (for logging and result).
- * @param {string} imdbId - The IMDb ID (for logging).
- * @returns {object|null} The rating object { source, value, url } or null if not found.
- */
 function scrapeIMDbPage(htmlContent, url, imdbId) {
     try {
         const $ = cheerio.load(htmlContent);
@@ -59,12 +52,7 @@ function scrapeIMDbPage(htmlContent, url, imdbId) {
 }
 
 
-/**
- * Fetches the user rating from IMDb.
- * @param {'movie'|'series'} type - Content type (movie or series).
- * @param {string} imdbId - IMDb ID (e.g., tt1234567 or tt1234567:1:1).
- * @returns {Promise<object|null>} A rating object or null.
- */
+
 async function getRating(type, imdbId) {
     const baseImdbId = imdbId.split(':')[0]; // Use only the base ID (tt1234567)
     if (!BASE_URL) {

@@ -8,12 +8,7 @@ const { formatTitleForUrlSlug } = require('../utils/urlFormatter');
 const PROVIDER_NAME = 'CringeMDB';
 const BASE_URL = config.sources.cringeMdbBaseUrl;
 
-/**
- * Constructs the CringeMDB URL.
- * @param {string} title - Movie title.
- * @param {string} releaseYear - Movie release year.
- * @returns {string|null} The URL or null if data is missing.
- */
+
 function getCringeMDBUrl(title, releaseYear) {
     if (!title || !releaseYear || !BASE_URL) return null;
 
@@ -29,12 +24,7 @@ function getCringeMDBUrl(title, releaseYear) {
     return `${BASE_URL}/movie/${formattedTitle}-${releaseYear}`;
 }
 
-/**
- * Scrapes the CringeMDB page for content warnings.
- * @param {string} htmlContent - The HTML content.
- * @param {string} url - The scraped URL.
- * @returns {object|null} Object with { source, type, value, url } or null.
- */
+
 function scrapeCringeMDBPage(htmlContent, url) {
     try {
         const $ = cheerio.load(htmlContent);
@@ -105,13 +95,7 @@ function scrapeCringeMDBPage(htmlContent, url) {
     }
 }
 
-/**
- * Fetches content warnings from CringeMDB.
- * @param {'movie'|'series'} type - Content type (only 'movie' supported).
- * @param {string} imdbId - IMDb ID (for logging).
- * @param {object} streamInfo - Object containing { name: string, year: string }.
- * @returns {Promise<object|null>} A rating/warning object or null.
- */
+
 async function getRating(type, imdbId, streamInfo) {
     // CringeMDB primarily focuses on movies
     if (type !== 'movie') {

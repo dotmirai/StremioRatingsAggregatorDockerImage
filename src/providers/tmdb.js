@@ -17,12 +17,7 @@ const tmdbApiClient = axios.create({
 });
 
 
-/**
- * Fetches rating details directly from the TMDB API for a movie or series.
- * @param {number} tmdbId - The Movie Database ID.
- * @param {'movie'|'series'} type - The content type.
- * @returns {Promise<object|null>} Rating object { source, value, url } or null.
- */
+
 async function getTmdbRatingDetails(tmdbId, type) {
     if (!API_KEY) {
         // This should have been caught at startup, but double-check
@@ -85,14 +80,7 @@ async function getTmdbRatingDetails(tmdbId, type) {
     }
 }
 
-/**
- * Main exported function for the TMDB provider. Gets the rating using the TMDB ID.
- * @param {'movie'|'series'} type - Content type.
- * @param {string} imdbId - IMDb ID (mainly for logging context).
- * @param {object} streamInfo - Stream info object (not directly used here).
- * @param {number} tmdbId - The Movie Database ID (required).
- * @returns {Promise<object|null>} Rating object or null.
- */
+
 async function getRating(type, imdbId, streamInfo, tmdbId) {
     logger.debug(`[${PROVIDER_NAME}] Getting rating for IMDb ${imdbId} using TMDB ID ${tmdbId}`);
 

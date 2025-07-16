@@ -86,7 +86,7 @@ async function streamHandler({ type, id }) {
 
         // Create the stream object for Stremio
         const stream = {
-            name: "📊 Ratings Aggregator ", // Main title for the stream item
+            name: "🎯 Ratings Aggregator ", // Main title for the stream item
             description: formattedLines.join('\n'),
             // Use IMDb URL as a fallback/reference if no specific rating URL is best
             externalUrl: `${config.sources.imdbBaseUrl}/title/${id.split(':')[0]}/`,

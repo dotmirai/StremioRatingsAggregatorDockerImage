@@ -6,6 +6,7 @@ const pkg = require('../../package.json');
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
+    centralUrl: 'https://rating-aggregator.elfhosted.com/manifest.json',
     http: { // Added HTTP config section
         requestTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS || '12000', 10), // 12 seconds default
     },

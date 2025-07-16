@@ -71,17 +71,36 @@ body {
 }
 
 .sponsor-content img {
-  @apply float-left w-20 h-20 sm:w-28 sm:h-28 mr-4 mb-2 rounded;
+  float: left;
+  width: 5rem;
+  height: 5rem;
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.5rem;
+}
+@media (min-width: 640px) {
+  .sponsor-content img {
+    width: 7rem;
+    height: 7rem;
+  }
 }
 
-.sponsor-content p, .sponsor-content a {
-  @apply text-gray-200;
+.sponsor-content p,
+.sponsor-content a {
+  color: #e5e7eb; /* Tailwind text-gray-200 */
 }
 
 .sponsor-content a {
-  @apply text-blue-400 underline hover:text-blue-300 transition-colors duration-150;
+  color: #60a5fa; /* Tailwind text-blue-400 */
+  text-decoration: underline;
+  transition-property: color;
+  transition-duration: 150ms;
+}
+.sponsor-content a:hover {
+  color: #93c5fd; /* Tailwind text-blue-300 */
 }
 
 .sponsor-content strong {
-  @apply text-white font-semibold;
+  color: #fff;
+  font-weight: 600;
 }

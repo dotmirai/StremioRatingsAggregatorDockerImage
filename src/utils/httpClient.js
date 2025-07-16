@@ -22,15 +22,7 @@ const instance = axios.create({
     },
 });
 
-/**
- * Performs a GET request using the shared Axios instance.
- * Handles basic logging and returns the Axios response object.
- * Throws error only on network/timeout issues, not on HTTP status codes.
- * @param {string} url - The URL to fetch.
- * @param {string} providerName - Name of the calling provider for logging.
- * @param {object} [requestConfig={}] - Optional additional Axios config for this request.
- * @returns {Promise<import('axios').AxiosResponse|null>} - The Axios response object or null on network/config error.
- */
+
 async function getPage(url, providerName, requestConfig = {}) {
     try {
         logger.debug(`[${providerName}] HTTP GET: ${url}`);

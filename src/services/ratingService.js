@@ -21,12 +21,7 @@ const activeProviders = [
     // extend here...
 ];
 
-/**
- * Calculate a dynamic TTL (in seconds) based on the age of the content.
- * @param {string|null} releaseDate - ISO date string (e.g., "2023-08-15") or null
- * @param {number} numRatings - Number of collected ratings
- * @returns {number} TTL in seconds
- */
+
 function calculateTTL(releaseDate, numRatings) {
     // --- No changes needed in this function ---
     if (!releaseDate) {
@@ -76,14 +71,7 @@ function processSingleRating(rating) {
 }
 
 
-/**
- * Aggregates ratings for a given IMDb ID and type.
- * Includes negative caching.
- *
- * @param {'movie'|'series'} type
- * @param {string} imdbId  IMDb ID, may include :S:E suffix
- * @returns {Promise<Array<{source:string,value:string}>|null>}
- */
+
 async function getRatings(type, imdbId) {
     const baseId = imdbId.split(':')[0];
     const cacheKey = `${CACHE_PREFIX}${type}:${baseId}`;

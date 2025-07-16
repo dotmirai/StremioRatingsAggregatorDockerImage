@@ -8,12 +8,6 @@ const { formatTitleForUrlSlug } = require('../utils/urlFormatter');
 const PROVIDER_NAME = 'Metacritic';
 const BASE_URL = config.sources.metacriticBaseUrl;
 
-/**
- * Generates the Metacritic URL.
- * @param {string} title - Content title.
- * @param {'movie'|'series'} type - Content type.
- * @returns {string|null} The URL or null if data missing.
- */
 function getMetacriticUrl(title, type) {
     if (!title || !BASE_URL) return null;
 
@@ -24,12 +18,6 @@ function getMetacriticUrl(title, type) {
     return `${BASE_URL}/${mediaType}/${formattedTitle}`;
 }
 
-/**
- * Scrapes the Metacritic page for Metascore and User Score.
- * @param {string} htmlContent - HTML content.
- * @param {string} url - Scraped URL.
- * @returns {Array<object>|null} Array of rating objects or null.
- */
 function scrapeMetacriticPage(htmlContent, url) {
     try {
         const $ = cheerio.load(htmlContent);
@@ -106,13 +94,7 @@ function scrapeMetacriticPage(htmlContent, url) {
     }
 }
 
-/**
- * Fetches ratings from Metacritic.
- * @param {'movie'|'series'} type - Content type.
- * @param {string} imdbId - IMDb ID (for logging).
- * @param {object} streamInfo - Object containing { name: string, year?: string }.
- * @returns {Promise<Array<object>|null>} An array of rating objects or null.
- */
+
 async function getRating(type, imdbId, streamInfo) {
     if (!streamInfo?.name) {
         logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Missing title.`);

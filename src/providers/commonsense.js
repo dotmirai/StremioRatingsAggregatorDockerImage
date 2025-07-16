@@ -8,12 +8,7 @@ const { formatTitleForUrlSlug } = require('../utils/urlFormatter'); // Use share
 const PROVIDER_NAME = 'Common Sense';
 const BASE_URL = config.sources.commonSenseBaseUrl;
 
-/**
- * Generates the Common Sense Media URL for a given title and type.
- * @param {string} title - Movie or series title.
- * @param {'movie'|'series'} type - Content type.
- * @returns {string|null} The constructed URL or null if title/base URL is missing.
- */
+
 function getCommonSenseUrl(title, type) {
     if (!title || !BASE_URL) return null;
 
@@ -24,12 +19,7 @@ function getCommonSenseUrl(title, type) {
     return `${BASE_URL}/${reviewType}/${formattedTitle}`;
 }
 
-/**
- * Scrapes the Common Sense Media page to extract the age rating.
- * @param {string} htmlContent - The HTML content of the page.
- * @param {string} url - The URL scraped (for logging and result).
- * @returns {object|null} The rating object { source, type, value, url } or null if not found.
- */
+
 function scrapeCommonSensePage(htmlContent, url) {
     try {
         const $ = cheerio.load(htmlContent);
@@ -64,13 +54,7 @@ function scrapeCommonSensePage(htmlContent, url) {
     }
 }
 
-/**
- * Fetches the age rating from Common Sense Media.
- * @param {'movie'|'series'} type - Content type.
- * @param {string} imdbId - IMDb ID (for logging).
- * @param {object} streamInfo - Object containing title ({ name: string }).
- * @returns {Promise<object|null>} A rating object or null.
- */
+
 async function getRating(type, imdbId, streamInfo) {
     if (!streamInfo?.name) {
         logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Missing title.`);

@@ -1,12 +1,5 @@
 // utils/urlFormatter.js
 
-/**
- * Formats a title into a URL-friendly slug.
- * Converts to lowercase, replaces non-alphanumeric chars with hyphens,
- * collapses multiple hyphens, and trims leading/trailing hyphens.
- * @param {string} title - The original title.
- * @returns {string} The formatted URL slug.
- */
 function formatTitleForUrlSlug(title) {
     if (!title) return '';
 

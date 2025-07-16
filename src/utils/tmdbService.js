@@ -2,14 +2,6 @@ const axios = require('axios');
 const config = require('../config');
 const logger = require('./logger');
 
-/**
- * Fetches TMDB ID, title/name, and year for a given IMDb ID and content type
- * using only the /find endpoint.
- *
- * @param {string} imdbId   - IMDb ID, possibly with :S:E suffix (e.g. "tt1234567:1:1")
- * @param {'movie'|'series'} type
- * @returns {Promise<{ tmdbId: number|null, name: string|null, date: string|null }>}
- */
 async function getTmdbData(imdbId, type) {
     if (!config.tmdb.apiKey) {
         logger.error('TMDB API key not configured.');
