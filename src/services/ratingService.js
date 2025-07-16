@@ -60,7 +60,7 @@ function dedupeRatings(results) {
 
 async function getRatings(type, imdbId) {
     const baseId = imdbId.split(':')[0];
-    const cacheKey = `test${CACHE_PREFIX}${type}:${baseId}`;
+    const cacheKey = `${CACHE_PREFIX}${type}:${baseId}`;
 
     // === Try Redis Cache ===
     if (redisClient.isReady()) {
