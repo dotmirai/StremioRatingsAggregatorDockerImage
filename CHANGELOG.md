@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.1](https://github.com/anmol210202/rating-aggregator-/compare/v1.8.0...v1.8.1) (2025-07-16)
+
+
+### Bug Fixes
+
+* removed test in cache key ([3bbebed](https://github.com/anmol210202/rating-aggregator-/commit/3bbebed658c5383ca4221e85acba02cd8fbb9d02))
+* rt & metacritic year url fix ([2c507ff](https://github.com/anmol210202/rating-aggregator-/commit/2c507ff9b104e2c9d249c080f875c2df373f8c41))
+
 ## [1.8.0](https://github.com/anmol210202/rating-aggregator-/compare/v1.7.2...v1.8.0) (2025-07-10)
 
 
