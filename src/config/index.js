@@ -2,12 +2,13 @@
 require('dotenv').config();
 
 const pkg = require('../../package.json');
+const addonManifest = require('./manifest');
 
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
     centralUrl: 'https://rating-aggregator.elfhosted.com/manifest.json',
-    http: { // Added HTTP config section
+    http: {
         requestTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS || '12000', 10), // 12 seconds default
     },
     tmdb: {
@@ -31,23 +32,7 @@ const config = {
         cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
     },
     userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36', // Update UA periodically
-    addon: {
-        id: 'community.ratings.aggregator',
-        version: pkg.version || '0.0.0',
-        name: process.env.ADDON_SUFFIX
-            ? `🎯 Ratings Aggregator | ${process.env.ADDON_SUFFIX}`
-            : '🎯 Ratings Aggregator',
-        description: 'Aggregated ratings from IMDb, TMDb, Metacritic, Common Sense, CringeMDB and more.',
-        logo:'https://emojicdn.elk.sh/%F0%9F%8E%AF?style=google',
-        catalogs: [],
-        resources: ['stream'],
-        types: ['movie', 'series'],
-        idPrefixes: ['tt'],
-        behaviorHints: {
-            configurable: true,
-            configurationRequired: false,
-        }
-    }
+    addon: addonManifest,
 };
 
 // --- Validations ---

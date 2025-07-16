@@ -9,5 +9,4 @@ module.exports = {
     cringeMdbProvider: require('./cringemdb'),
     rottentomatoesProvider: require('./rottentomatoesProvider'),
     // letterboxdProvider: require('./letterboxd'), // Keep commented if not implemented
-    // rottenTomatoesProvider: require('./rottenTomatoes'), // Keep commented if not implemented
 };

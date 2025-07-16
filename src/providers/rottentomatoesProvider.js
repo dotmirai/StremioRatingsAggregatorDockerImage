@@ -1,225 +1,120 @@
-// providers/rottentomatoesProvider.js
 const cheerio = require('cheerio');
 const config = require('../config');
 const logger = require('../utils/logger');
 const { getPage } = require('../utils/httpClient');
-const { formatTitleForUrlSlug } = require('../utils/urlFormatter');
 
 const PROVIDER_NAME = 'Rotten Tomatoes';
 const BASE_URL = config.sources.rottentomatoesBaseUrl;
 
-// providers/rottentomatoesProvider.js
-// ... other imports ...
-
-function formatRottenTomatoesSlug(title) {
-    if (!title) return '';
-
-    return title
-        .toLowerCase()
-        // Handle special cases first
-        .replace(/[:_]/g, ' ') // Convert existing colons/underscores to spaces
-        .replace(/['’]/g, '')  // Remove apostrophes
-        // Replace spaces with underscores
+function formatSlug(title) {
+    return title?.toLowerCase()
+        .replace(/[:_]/g, ' ')
+        .replace(/['’]/g, '')
         .replace(/\s+/g, '_')
-        // Remove other special characters
         .replace(/[^a-z0-9_]/g, '')
-        // Collapse consecutive underscores
         .replace(/_+/g, '_')
-        // Trim leading/trailing underscores
-        .replace(/^_|_$/g, '');
+        .replace(/^_|_$/g, '') || '';
 }
 
-function getRottenTomatoesUrl(title, type) {
-    if (!title || !BASE_URL) return null;
+function buildCandidateUrls(title, type, year) {
+    const path = type === 'series' ? 'tv' : 'm';
+    const slug = formatSlug(title);
 
-    const mediaPath = type === 'series' ? 'tv' : 'm';
-    const formattedTitle = formatRottenTomatoesSlug(title);
-    if (!formattedTitle) return null;
+    const urls = [];
 
-    return `${BASE_URL}/${mediaPath}/${formattedTitle}`;
+    if (year) {
+        urls.push(`${BASE_URL}/${path}/${slug}_${year}`);        // first: movie_2024
+    }
+
+    urls.push(`${BASE_URL}/${path}/${slug}`);                    // second: movie
+
+    if (year) {
+        urls.push(`${BASE_URL}/${path}/${slug}_${year}_2`);      // third: movie_2024_2
+    }
+
+    return urls;
 }
 
-function scrapeDomRatings($, url) {
+
+function parseJsonLd($) {
     const ratings = [];
 
-    try {
-        // Critics Score
-        const criticsScoreElem = $('rt-text[slot="criticsScore"]');
-        if (criticsScoreElem.length) {
-            const scoreText = criticsScoreElem.first().text().trim();
-            const scoreValue = parseInt(scoreText, 10);
-            if (!isNaN(scoreValue) && scoreValue >= 0 && scoreValue <= 100) {
-                ratings.push({
-                    source: 'RT',
-                    value: `${scoreValue}%`,
-                    type: 'Critics'
-                });
+    $('script[type="application/ld+json"]').each((_, el) => {
+        try {
+            const json = JSON.parse($(el).html());
+
+            if (json.aggregateRating?.ratingValue) {
+                const val = parseInt(json.aggregateRating.ratingValue.toString().replace('%', ''), 10);
+                if (!isNaN(val)) ratings.push({ source: 'RT', value: `${val}/100`, type: 'Critics' });
             }
-        }
 
-        // Audience Score
-        const audienceScoreElem = $('rt-text[slot="audienceScore"]');
-        if (audienceScoreElem.length) {
-            const scoreText = audienceScoreElem.first().text().trim();
-            const scoreValue = parseInt(scoreText, 10);
-            if (!isNaN(scoreValue) && scoreValue >= 0 && scoreValue <= 100) {
-                ratings.push({
-                    source: 'RT Users',
-                    value: `${scoreValue}%`,
-                    type: 'Audience'
-                });
+            if (json.audience?.audienceScore) {
+                const val = parseInt(json.audience.audienceScore.toString().replace('%', ''), 10);
+                if (!isNaN(val)) ratings.push({ source: 'RT Users', value: `${val}/100`, type: 'Audience' });
             }
-        }
-
-        // Fallback check if no scores found
-        if (ratings.length === 0) {
-            logger.debug(`[${PROVIDER_NAME}] No scores found in DOM structure for ${url}`);
-        }
-
-        return ratings;
-    } catch (error) {
-        logger.error(`[${PROVIDER_NAME}] DOM scraping error for ${url}: ${error.message}`);
-        return [];
-    }
-}
-
-// Update the JSON-LD parser to handle percentage values
-function parseJsonLdRatings(jsonData) {
-    const ratings = [];
-
-    try {
-        // Handle percentage values in JSON-LD
-        const parsePercentage = (value) => {
-            if (typeof value === 'string') {
-                return parseInt(value.replace('%', ''), 10);
-            }
-            return Math.round(Number(value) * 100);
-        };
-
-        if (jsonData.aggregateRating) {
-            const value = parsePercentage(jsonData.aggregateRating.ratingValue);
-            if (!isNaN(value) && value >= 0 && value <= 100) {
-                ratings.push({
-                    source: 'RT',
-                    value: `${value}/100`,
-                    type: 'Critics'
-                });
-            }
-        }
-
-        // Additional check for audienceScore
-        if (jsonData.audience && jsonData.audience.audienceScore) {
-            const audienceValue = parsePercentage(jsonData.audience.audienceScore);
-            if (!isNaN(audienceValue) && audienceValue >= 0 && audienceValue <= 100) {
-                ratings.push({
-                    source: 'RT Users',
-                    value: `${audienceValue}/100`,
-                    type: 'Audience'
-                });
-            }
-        }
-    } catch (error) {
-        logger.error(`[${PROVIDER_NAME}] Error parsing JSON-LD data: ${error.message}`);
-    }
+        } catch { /* ignore bad JSON */ }
+    });
 
     return ratings;
 }
 
-function scrapeRottenTomatoesPage(htmlContent, url) {
-    try {
-        const $ = cheerio.load(htmlContent);
-        const ratings = [];
+function scrapeDom($) {
+    const ratings = [];
 
-        // First try JSON-LD parsing
-        const jsonLdScripts = $('script[type="application/ld+json"]');
-        jsonLdScripts.each((i, el) => {
-            try {
-                const jsonData = JSON.parse($(el).html());
-                const result = parseJsonLdRatings(jsonData);
-                // console.log(result);
-                if (result.length > 0) ratings.push(...result);
-            } catch (error) {
-                logger.debug(`[${PROVIDER_NAME}] Error parsing JSON-LD script #${i + 1}: ${error.message}`);
-            }
+    const critic = $('rt-text[slot="criticsScore"]').first().text().trim();
+    const user = $('rt-text[slot="audienceScore"]').first().text().trim();
+
+    if (/^\d+$/.test(critic)) ratings.push({ source: 'RT', value: `${critic}/100`, type: 'Critics' });
+    if (/^\d+$/.test(user)) ratings.push({ source: 'RT Users', value: `${user}/100`, type: 'Audience' });
+
+    return ratings;
+}
+
+function scrape(html, url) {
+    try {
+        const $ = cheerio.load(html);
+        const all = [...parseJsonLd($), ...scrapeDom($)];
+
+        const seen = new Set();
+        const unique = all.filter(r => {
+            if (seen.has(r.source)) return false;
+            seen.add(r.source);
+            return true;
         });
 
-        // Fall back to DOM scraping if no ratings found
-        if (ratings.length === 0) {
-            const domRatings = scrapeDomRatings($, url);
-            ratings.push(...domRatings);
-        }
-
-        // Deduplicate and validate
-        const uniqueRatings = [];
-        const seenSources = new Set();
-
-        // console.dir(ratings);
-
-        for (const rating of ratings) {
-            if (!seenSources.has(rating.source)) {
-                seenSources.add(rating.source);
-                uniqueRatings.push({
-                    source: rating.source,
-                    value: rating.value,
-                    url
-                });
-            }
-        }
-
-        return uniqueRatings.length > 0 ? uniqueRatings : null;
-    } catch (error) {
-        logger.error(`[${PROVIDER_NAME}] General scraping error for ${url}: ${error.message}`);
+        return unique.length ? unique.map(r => ({ ...r, url })) : null;
+    } catch (err) {
+        logger.error(`[${PROVIDER_NAME}] Scrape error for ${url}: ${err.message}`);
         return null;
     }
 }
 
+async function tryFetch(url) {
+    logger.debug(`[${PROVIDER_NAME}] Trying URL: ${url}`);
+    const res = await getPage(url, PROVIDER_NAME, {
+        headers: {
+            Referer: BASE_URL,
+            Accept: 'text/html,application/xhtml+xml'
+        }
+    });
+
+    if (res?.status === 200) return scrape(res.data, url);
+    return null;
+}
+
 async function getRating(type, imdbId, streamInfo) {
-    if (!streamInfo?.name) {
-        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Missing title`);
-        return null;
+    if (!streamInfo?.name || !BASE_URL) return null;
+
+    const year = streamInfo.year || (streamInfo.date?.split('-')[0] || '');
+    const urls = buildCandidateUrls(streamInfo.name, type, year);
+
+    for (const url of urls) {
+        const result = await tryFetch(url);
+        if (result) return result;
     }
 
-    if (!BASE_URL) {
-        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Base URL not configured`);
-        return null;
-    }
-
-    const targetUrl = getRottenTomatoesUrl(streamInfo.name, type);
-    if (!targetUrl) {
-        logger.warn(`[${PROVIDER_NAME}] Skipping ${imdbId}: Invalid URL for "${streamInfo.name}"`);
-        return null;
-    }
-
-    logger.debug(`[${PROVIDER_NAME}] Fetching ratings for ${imdbId} from ${targetUrl}`);
-
-    try {
-        const response = await getPage(targetUrl, PROVIDER_NAME, {
-            headers: {
-                'Referer': BASE_URL,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
-        });
-
-        if (!response || response.status !== 200) {
-            if (response?.status === 404) {
-                logger.debug(`[${PROVIDER_NAME}] 404 Not Found for ${targetUrl}`);
-            }
-            return null;
-        }
-
-        const ratings = scrapeRottenTomatoesPage(response.data, targetUrl);
-
-        if (!ratings) {
-            logger.debug(`[${PROVIDER_NAME}] No valid ratings found for ${imdbId}`);
-            return null;
-        }
-
-        logger.info(`[${PROVIDER_NAME}] Found ${ratings.length} ratings for ${imdbId}`);
-        return ratings;
-    } catch (error) {
-        logger.error(`[${PROVIDER_NAME}] Error fetching ratings for ${imdbId}: ${error.message}`);
-        return null;
-    }
+    logger.debug(`[${PROVIDER_NAME}] No valid ratings found for ${imdbId}`);
+    return null;
 }
 
 module.exports = {

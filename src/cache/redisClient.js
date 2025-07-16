@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 let client;
 let ready = false;
 
-/** Initialize (or return) the single Redis client */
+// --- Core: init & lifecycle ---
 function initClient() {
     if (client) return client;
 
@@ -26,7 +26,7 @@ function initClient() {
 
     client.on('end', () => {
         if (ready) {
-            logger.warn('Redis client connection closed.');
+            logger.warn('Redis connection closed.');
             ready = false;
         }
     });
@@ -38,20 +38,38 @@ function initClient() {
     return client;
 }
 
-/** Check readiness */
 function isReady() {
     return ready;
 }
 
-/** Retrieve ratings hash */
+function getClient() {
+    return client;
+}
+
+// Optional: retryable connect (not used by default)
+async function safeConnect(retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await client.connect();
+            return;
+        } catch (err) {
+            logger.warn(`Retry ${i + 1}/${retries} Redis connect failed:`, err.message);
+            await new Promise(res => setTimeout(res, delay));
+        }
+    }
+    throw new Error('Redis connection failed after retries');
+}
+
+// --- Cache API ---
+
 async function getRatingsHash(key) {
-    const redis = initClient();
     if (!ready) {
-        logger.warn(`[getRatingsHash] Redis not ready, skipping "${key}"`);
+        logger.warn(`[getRatingsHash] Redis not ready, skip "${key}"`);
         return null;
     }
+
     try {
-        const hash = await redis.hGetAll(key);
+        const hash = await client.hGetAll(key);
         if (!hash || Object.keys(hash).length === 0) return null;
         return Object.entries(hash).map(([source, value]) => ({ source, value }));
     } catch (err) {
@@ -60,14 +78,9 @@ async function getRatingsHash(key) {
     }
 }
 
-/** Store ratings hash + TTL */
 async function setRatingsHash(key, ratings, ttlSeconds = config.cache.ttlSeconds) {
-    const redis = initClient();
-    if (!ready || !ratings || ratings.length === 0) {
-        if (!ratings || ratings.length === 0)
-            logger.warn(`[setRatingsHash] No ratings for "${key}", skip`);
-        else
-            logger.warn(`[setRatingsHash] Redis not ready, cannot set "${key}"`);
+    if (!ready || !ratings?.length) {
+        logger.warn(`[setRatingsHash] Redis not ready or no ratings for "${key}"`);
         return false;
     }
 
@@ -77,59 +90,62 @@ async function setRatingsHash(key, ratings, ttlSeconds = config.cache.ttlSeconds
     }, {});
 
     try {
-        await redis
+        await client
             .multi()
             .hSet(key, hashData)
             .expire(key, ttlSeconds)
             .exec();
+
         logger.debug(`Cached "${key}" (${ratings.length} fields) TTL ${ttlSeconds}s`);
         return true;
     } catch (err) {
-        logger.error(`Error multi.exec for "${key}":`, err);
+        logger.error(`Error caching "${key}":`, err);
         return false;
     }
 }
 
-/** Retrieve hash or negative marker */
 async function getRatingsHashOrMarker(key) {
-    const redis = initClient();
     if (!ready) {
         logger.warn(`[getRatingsHashOrMarker] Redis not ready, skip "${key}"`);
         return null;
     }
+
     try {
-        const type = await redis.type(key);
+        const type = await client.type(key);
+
         if (type === 'hash') {
-            const hash = await redis.hGetAll(key);
-            if (!hash || !Object.keys(hash).length) return null;
-            return Object.entries(hash).map(([s, v]) => ({ source: s, value: v }));
+            const hash = await client.hGetAll(key);
+            if (!hash || Object.keys(hash).length === 0) return null;
+            return Object.entries(hash).map(([source, value]) => ({ source, value }));
         }
+
         if (type === 'string') {
-            return await redis.get(key);
+            return await client.get(key); // marker
         }
+
         return null;
     } catch (err) {
-        logger.error(`Error type/get for "${key}":`, err);
+        logger.error(`Error checking key type "${key}":`, err);
         return null;
     }
 }
 
-/** Store negative-cache marker */
 async function setNegativeMarker(key, marker, ttlSeconds = config.cache.negativeTtlSeconds) {
-    const redis = initClient();
     if (!ready) {
         logger.warn(`[setNegativeMarker] Redis not ready, skip "${key}"`);
         return false;
     }
+
     try {
-        return (await redis.set(key, marker, { EX: ttlSeconds })) === 'OK';
+        const result = await client.set(key, marker, { EX: ttlSeconds });
+        logger.debug(`Set negative marker "${key}" = "${marker}" for ${ttlSeconds}s`);
+        return result === 'OK';
     } catch (err) {
-        logger.error(`Error set negative marker for "${key}":`, err);
+        logger.error(`Error setting marker "${key}":`, err);
         return false;
     }
 }
 
-/** Disconnect client */
 async function disconnect() {
     if (client && ready) {
         try {
@@ -137,23 +153,22 @@ async function disconnect() {
             logger.info('Redis client disconnected.');
         } catch (err) {
             logger.error('Error during Redis quit:', err);
-        } finally {
-            client = null;
-            ready = false;
         }
-    } else {
-        client = null;
-        ready = false;
     }
+    client = null;
+    ready = false;
 }
 
+// --- Exports ---
 module.exports = {
     initClient,
+    connect: async () => initClient(), // for compatibility
     isReady,
-    connect: async () => initClient(), // keep compatibility
+    getClient,
     getRatingsHash,
     setRatingsHash,
     getRatingsHashOrMarker,
     setNegativeMarker,
-    disconnect
+    disconnect,
+    safeConnect // optional use
 };

@@ -1,4 +1,3 @@
-// providers/imdbProvider.js
 const cheerio = require('cheerio');
 const config = require('../config');
 const logger = require('../utils/logger');
@@ -7,82 +6,53 @@ const { getPage } = require('../utils/httpClient');
 const PROVIDER_NAME = 'IMDb';
 const BASE_URL = config.sources.imdbBaseUrl;
 
-function scrapeIMDbPage(htmlContent, url, imdbId) {
-    try {
-        const $ = cheerio.load(htmlContent);
+function extractRatingFromHtml(html, url, imdbId) {
+    const $ = cheerio.load(html);
+    const ratingText = $('div[data-testid="hero-rating-bar__aggregate-rating__score"] > span').first().text().trim();
 
-        // Selector based on IMDb's current structure for the main rating score
-        const ratingSelector = 'div[data-testid="hero-rating-bar__aggregate-rating__score"] > span';
-        // Target the first span within the score section
-        let ratingText = $(ratingSelector).first().text().trim();
-
-        if (!ratingText) {
-            logger.warn(`[${PROVIDER_NAME}] Rating selector ('${ratingSelector}') not found or empty for ${imdbId} at ${url}.`);
-            return null;
-        }
-
-        // IMDb sometimes includes "/10" directly, sometimes just the number.
-        // Also handle potential thousands separators if scraping non-English pages.
-        const ratingMatch = ratingText.match(/^(\d+(\.\d+)?)/); // Match starting digits/decimal
-        const ratingValue = ratingMatch ? ratingMatch[1] : null;
-
-
-        if (ratingValue && /^\d+(\.\d+)?$/.test(ratingValue)) {
-            // Check if rating is within a reasonable range (0-10)
-            const ratingNum = parseFloat(ratingValue);
-            if (ratingNum >= 0 && ratingNum <= 10) {
-                logger.debug(`[${PROVIDER_NAME}] Found rating ${ratingValue}/10 for ${imdbId}`);
-                return {
-                    source: PROVIDER_NAME,
-                    value: `${ratingValue}/10`, // Standardize format
-                    url: url,
-                };
-            } else {
-                logger.warn(`[${PROVIDER_NAME}] Parsed rating ${ratingNum} for ${imdbId} is outside expected 0-10 range.`);
-                return null;
-            }
-        } else {
-            logger.warn(`[${PROVIDER_NAME}] Could not parse valid rating number from text "${ratingText}" for ${imdbId} at ${url}`);
-            return null;
-        }
-    } catch (error) {
-        logger.error(`[${PROVIDER_NAME}] Cheerio parsing error for ${imdbId} at ${url}: ${error.message}`);
-        return null; // Error during scraping
-    }
-}
-
-
-
-async function getRating(type, imdbId) {
-    const baseImdbId = imdbId.split(':')[0]; // Use only the base ID (tt1234567)
-    if (!BASE_URL) {
-        logger.warn(`[${PROVIDER_NAME}] Skipping ${baseImdbId}: Base URL not configured.`);
+    if (!ratingText) {
+        logger.warn(`[${PROVIDER_NAME}] Rating not found for ${imdbId} at ${url}`);
         return null;
     }
 
-    const targetUrl = `${BASE_URL}/title/${baseImdbId}/`;
-    logger.debug(`[${PROVIDER_NAME}] Attempting fetch for ${baseImdbId} from ${targetUrl}`);
+    const rating = parseFloat(ratingText);
+    if (isNaN(rating) || rating < 0 || rating > 10) {
+        logger.warn(`[${PROVIDER_NAME}] Invalid rating "${ratingText}" for ${imdbId} at ${url}`);
+        return null;
+    }
 
-    // Use shared client, force English page with headers if possible
-    const response = await getPage(targetUrl, PROVIDER_NAME, {
+    return {
+        source: PROVIDER_NAME,
+        value: `${rating.toFixed(1)}/10`,
+        url
+    };
+}
+
+async function getRating(_type, imdbId) {
+    const baseId = imdbId?.split(':')[0];
+    if (!baseId || !/^tt\d+$/.test(baseId)) {
+        logger.warn(`[${PROVIDER_NAME}] Invalid IMDb ID: ${imdbId}`);
+        return null;
+    }
+
+    if (!BASE_URL) {
+        logger.warn(`[${PROVIDER_NAME}] Skipping ${baseId}: Base URL not configured`);
+        return null;
+    }
+
+    const url = `${BASE_URL}/title/${baseId}/`;
+    logger.debug(`[${PROVIDER_NAME}] Fetching from ${url}`);
+
+    const res = await getPage(url, PROVIDER_NAME, {
         headers: { 'Accept-Language': 'en-US,en;q=0.9' }
     });
 
-    if (!response || response.status !== 200) {
-        // 404 or other errors logged by getPage
-        return null;
-    }
+    if (!res || res.status !== 200) return null;
 
-    const rating = scrapeIMDbPage(response.data, targetUrl, baseImdbId);
-
-    if (!rating) {
-        logger.debug(`[${PROVIDER_NAME}] No rating found via scraping for ${baseImdbId}`);
-    }
-
-    return rating;
+    return extractRatingFromHtml(res.data, url, baseId);
 }
 
 module.exports = {
     name: PROVIDER_NAME,
-    getRating,
+    getRating
 };
