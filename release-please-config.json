@@ -3,16 +3,23 @@
   "release-type": "node",
   "include-component-in-tag": false,
   "separate-pull-requests": false,
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "sync-all",
+      "components": ["ratings-aggregator", "ratings-pro-frontend"]
+    }
+  ],
   "packages": {
     ".": {
       "path": ".",
       "release-type": "node",
-      "package-name": "ratings-aggregator"
+      "component": "ratings-aggregator"
     },
     "frontend": {
       "path": "frontend",
       "release-type": "node",
-      "package-name": "ratings-pro-frontend"
+      "component": "ratings-pro-frontend"
     }
   }
 }
