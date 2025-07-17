@@ -7,14 +7,12 @@
     ".": {
       "path": ".",
       "release-type": "node",
-      "package-name": "ratings-aggregator",
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "frontend/package.json",
-          "jsonpath": "$.version"
-        }
-      ]
+      "package-name": "ratings-aggregator"
+    },
+    "frontend": {
+      "path": "frontend",
+      "release-type": "node",
+      "package-name": "ratings-pro-frontend"
     }
   }
 }
