@@ -12,7 +12,8 @@ jobs:
 
     steps:
       - uses: tgymnich/fork-sync@v1.8
-        with:
-          owner: llvm
+        with: 
+          owner: anmol210202
+          repo: rating-aggregator-
           base: master
           head: master
